@@ -1,0 +1,40 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
+  <meta name="theme-color" content="#0b1230" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="My Day" />
+  <link rel="manifest" href="manifest.webmanifest" />
+  <link rel="apple-touch-icon" href="icons/apple-touch-icon.png" />
+  <title>My Day</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <div class="app-shell">
+    <header class="topbar">
+      <div class="brand-wrap">
+        <div class="brand-mark"><img src="icons/icon-192.png" alt="My Day" /></div>
+        <div><div class="brand">My Day</div><div class="tagline">Tu vida, en un solo lugar ✦</div></div>
+      </div>
+      <button class="icon-btn" id="settingsBtn" aria-label="Configuración">⚙️</button>
+    </header>
+
+    <main id="app" class="content"></main>
+
+    <nav class="bottom-nav" aria-label="Navegación principal">
+      <button data-tab="home" class="nav-item active"><span>⌂</span><small>Inicio</small></button>
+      <button data-tab="wardrobe" class="nav-item"><span>♧</span><small>Ropa</small></button>
+      <button data-tab="calendar" class="nav-item"><span>▦</span><small>Calendario</small></button>
+      <button data-tab="routine" class="nav-item"><span>✓</span><small>Rutina</small></button>
+      <button data-tab="schedule" class="nav-item"><span>◷</span><small>Horario</small></button>
+      <button data-tab="study" class="nav-item"><span>▤</span><small>Estudios</small></button>
+    </nav>
+  </div>
+
+  <div class="modal hidden" id="modal"></div>
+  <script src="app.js"></script>
+</body>
+</html>
