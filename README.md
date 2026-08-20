@@ -10,4 +10,4 @@ PWA personal de organización: ropa, calendario, rutinas, horario, estudios y ap
 5. Compartir → Añadir a pantalla de inicio.
 
 ## Notificaciones
-La app solicita permiso de notificaciones y puede mostrar avisos mientras está abierta. Para push fiables cuando la PWA está cerrada en iPhone hace falta conectar un servicio push/backend con claves VAPID. El service worker ya está preparado para recibir eventos `push`; el siguiente paso es conectar ese backend.
+La app solicita permiso de notificaciones y puede mostrar avisos del navegador cuando tienes tareas, rutinas o eventos a la hora correspondiente.
