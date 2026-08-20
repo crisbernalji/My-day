@@ -1,22 +1,20 @@
-const KEY='my-day-state-v2';
+const KEY='my-day-state-v3';
 const SUBJECTS=['Matemáticas','Lengua','Química','Biología','Inglés','Filosofía','Historia'];
 const DAYS=['Lun','Mar','Mié','Jue','Vie','Sáb','Dom'];
-const MOODS=['😄','🙂','😐','😔','😫'];
 
 const state=JSON.parse(localStorage.getItem(KEY)||'null')||{
-  events:[], outfits:[], routines:[], tasks:[], schedule:{}, notes:[], favorites:[],
-  theme:'pastel', tab:'home', grades:[], projects:[], moodLogs:{}, waterLogs:{}, sleepLogs:{},
-  routineLibrary:[], routineLogs:{} // routineLogs: { 'YYYY-MM-DD': true/false }
+  events:[], outfits:[], routines:[], tasks:[], schedule:{}, favorites:[],
+  theme:'pastel', tab:'home', grades:[], projects:[], routineLibrary:[], routineLogs:{}
 };
 const app=document.getElementById('app'), modal=document.getElementById('modal');
 
 let viewDate=new Date(); if(viewDate.getFullYear()<2026)viewDate=new Date(2026,0,1);
 let outfitWeek=new Date();
 let studyDate=iso(new Date());
-let wardrobeSearchQuery='';
 let wardrobeSeason='Verano';
 let wardrobeOccasion='Todas';
 
+// Pomodoro
 let pomodoroTime = 25 * 60, pomodoroTimer = null;
 
 function save(){localStorage.setItem(KEY,JSON.stringify(state));}
@@ -38,47 +36,34 @@ function home(){
  <div class="stats"><div class="stat"><b>${ev}</b><small>eventos hoy</small></div><div class="stat"><b>${tasks}</b><small>tareas pendientes</small></div><div class="stat"><b>${done}</b><small>rutinas hechas</small></div></div>
  ${pageTitle('','Tu My Day','Cinco rincones para tenerlo todo bajo control')}
  <div class="grid">
- ${feature('👗','Ropa','Armario cápsula, contador de uso y zona de lavadora.','wardrobe')}
- ${feature('📅','Calendario','Eventos organizados por meses con colores.','calendar')}
- ${feature('🧴','Rutina','Habit Tracker en cuadrícula (verde/rojo) y biblioteca.','routine')}
+ ${feature('👗','Ropa','Armario, lavadora y recuento de usos.','wardrobe')}
+ ${feature('📅','Calendario','Eventos organizados por meses.','calendar')}
+ ${feature('🧴','Rutina','Habit Tracker mensual (verde/rojo) y biblioteca.','routine')}
  ${feature('🕰️','Horario','Tu horario semanal de Bachiller.','schedule')}
- ${feature('📚','Estudios','Pomodoro, nota media, entregas y tareas.','study')}
+ ${feature('📚','Estudios','Pomodoro con controles, notas por asignatura y entregas.','study')}
  </div><div class="footer-note">🎞️ ⭐️ 🎨 💅🏼 🪩 🍸 🌊 🐆 · My Day</div>`;
 }
 function feature(e,t,p,tab){return `<div class="card feature" data-tab-go="${tab}"><div class="emoji">${e}</div><h3>${t}</h3><p>${p}</p></div>`}
 
 function wardrobe(){
-  const monday=new Date(outfitWeek); 
-  monday.setDate(monday.getDate()-((monday.getDay()+6)%7));
+  const monday=new Date(outfitWeek); monday.setDate(monday.getDate()-((monday.getDay()+6)%7));
   const days=Array.from({length:7},(_,i)=>new Date(monday.getFullYear(),monday.getMonth(),monday.getDate()+i));
-  const query=wardrobeSearchQuery.trim().toLowerCase();
-  
-  const filteredOutfits=state.outfits.filter(o=>{
-    if((o.season||'Verano') !== wardrobeSeason) return false;
-    if(wardrobeOccasion !== 'Todas' && (o.occasion||'Casual') !== wardrobeOccasion) return false;
-    if(!query) return true;
-    return (o.name||'').toLowerCase().includes(query) || (o.items||'').toLowerCase().includes(query);
-  });
-
+  const filteredOutfits=state.outfits.filter(o=>(o.season||'Verano')===wardrobeSeason && (wardrobeOccasion==='Todas'||(o.occasion||'Casual')===wardrobeOccasion));
   const laundryList = state.outfits.filter(o => o.inLaundry);
-  const occasions = ['Todas', 'Clase', 'Casual', 'Fiesta', 'Deporte', 'Especial'];
 
   return `${pageTitle('','👗 Ropa y Estilo','Armario cápsula, lavadora y recuento de uso')}
 <div class="toolbar">${btn('‹','btn','data-action="outfit-prev"')}${btn('Esta semana','btn','data-action="outfit-now"')}${btn('›','btn','data-action="outfit-next"')}${btn('＋ Añadir conjunto','btn btn-primary','data-action="add-outfit"')}</div>
-<div class="week-grid" style="margin-top:14px">${days.map((d,i)=>{const ds=iso(d), os=state.outfits.filter(o=>o.date===ds);return `<div class="week-col"><h4>${DAYS[i]} · ${d.getDate()}/${d.getMonth()+1}</h4>${os.length?os.map(o=>`<div class="outfit" style="${o.inLaundry?'opacity:0.6;border:1px dashed var(--pink)':''}"><strong>${esc(o.name)} ${o.inLaundry?'🧺':''}</strong><small>${esc(o.items||'Sin prendas')}</small><div style="margin-top:7px;display:flex;gap:4px"><button class="circle-btn" style="width:auto;padding:0 8px;height:28px;font-size:11px" data-action="wear-outfit" data-id="${o.id}">👕 ${o.uses||0} usos</button><button class="circle-btn" style="width:28px;height:28px;font-size:12px" data-action="toggle-laundry" data-id="${o.id}">${o.inLaundry?'🧼':'🧺'}</button></div></div>`).join(''):'<div class="empty">Sin conjunto ✦</div>'}</div>`}).join('')}</div>
+<div class="week-grid" style="margin-top:14px">${days.map((d,i)=>{const ds=iso(d), os=state.outfits.filter(o=>o.date===ds);return `<div class="week-col"><h4>${DAYS[i]} · ${d.getDate()}/${d.getMonth()+1}</h4>${os.length?os.map(o=>`<div class="outfit" style="${o.inLaundry?'opacity:0.5;border:1px dashed var(--pink)':''}"><strong>${esc(o.name)} ${o.inLaundry?'🧺':''}</strong><small>${esc(o.items||'Sin prendas')}</small><div style="margin-top:7px;display:flex;gap:4px"><button class="circle-btn" style="width:auto;padding:0 8px;height:28px;font-size:11px" data-action="wear-outfit" data-id="${o.id}">👕 ${o.uses||0} usos</button><button class="circle-btn" style="width:28px;height:28px;font-size:12px" data-action="toggle-laundry" data-id="${o.id}">${o.inLaundry?'🧼':'🧺'}</button></div></div>`).join(''):'<div class="empty">Sin conjunto ✦</div>'}</div>`}).join('')}</div>
 
-${pageTitle('','🧺 Zona de Lavadora / Colada', 'Prendas no disponibles actualmente')}
-${laundryList.length?`<div class="list">${laundryList.map(o=>`<div class="item"><div class="item-main"><strong>🧺 ${esc(o.name)}</strong><small>${esc(o.items)}</small></div><button class="btn btn-soft" data-action="toggle-laundry" data-id="${o.id}">🧼 Sacar de la lavadora</button></div>`).join('')}</div>`:'<div class="empty">¡La lavadora está vacía! Toda tu ropa está lista para usar.</div>'}
+${pageTitle('','🧺 Zona de Lavadora / Colada', 'Ropa no disponible por el momento')}
+${laundryList.length?`<div class="list">${laundryList.map(o=>`<div class="item"><div class="item-main"><strong>🧺 ${esc(o.name)}</strong><small>${esc(o.items)}</small></div><button class="btn" data-action="toggle-laundry" data-id="${o.id}">🧼 Sacar de la lavadora</button></div>`).join('')}</div>`:'<div class="empty">¡La lavadora está vacía! Toda tu ropa está disponible.</div>'}
 
-${pageTitle('','🗄️ Armario Virtual Completo','Filtra tus prendas cápsula por temporada y ocasión')}
+${pageTitle('','🗄️ Armario Virtual Completo','Filtra tus prendas por temporada y ocasión')}
 <div class="toolbar" style="margin-bottom:8px">
   ${btn('☀️ Verano', wardrobeSeason==='Verano'?'btn btn-primary':'btn','data-action="set-season" data-season="Verano"')}
   ${btn('❄️ Invierno', wardrobeSeason==='Invierno'?'btn btn-primary':'btn','data-action="set-season" data-season="Invierno"')}
 </div>
-<div class="toolbar" style="margin-bottom:12px">
-  ${occasions.map(occ=>btn(occ, wardrobeOccasion===occ?'btn btn-soft-active':'btn','data-action="set-occasion" data-occ="'+occ+'"')).join('')}
-</div>
-${filteredOutfits.length?`<div class="list">${filteredOutfits.map(o=>`<div class="item"><div class="item-main"><strong>${esc(o.name)} ${o.inLaundry?'(En lavadora 🧺)':''}</strong><small>Prendas: ${esc(o.items||'No especificadas')} · 📌 ${esc(o.occasion||'Casual')} · <b>Puesto ${o.uses||0} veces</b></small></div><button class="btn" data-action="wear-outfit" data-id="${o.id}">＋1 Uso</button><button class="btn btn-soft" data-action="toggle-laundry" data-id="${o.id}">${o.inLaundry?'🧼 Limpio':'🧺 Lavar'}</button></div>`).join('')}</div>`:'<div class="empty">No hay prendas guardadas con ese filtro.</div>'}`;
+${filteredOutfits.length?`<div class="list">${filteredOutfits.map(o=>`<div class="item"><div class="item-main"><strong>${esc(o.name)} ${o.inLaundry?'(En lavadora 🧺)':''}</strong><small>Prendas: ${esc(o.items||'Sin detallar')} · 📌 ${esc(o.occasion||'Casual')} · <b>Puesto ${o.uses||0} veces</b></small></div><button class="btn" data-action="wear-outfit" data-id="${o.id}">＋1 Uso</button><button class="btn btn-soft" data-action="toggle-laundry" data-id="${o.id}">${o.inLaundry?'🧼 Sacar':'🧺 Lavar'}</button></div>`).join('')}</div>`:'<div class="empty">No hay prendas guardadas con ese filtro.</div>'}`;
 }
 
 function calendar(){
@@ -100,41 +85,34 @@ ${monthEvents.length?`<div class="list">${monthEvents.map(e=>`<div class="event-
 function routine(){
   const today=iso(new Date());
   let rs=state.routines.filter(r=>r.date===today);
-  
-  // Cuadrícula del mes actual para el Habit Tracker
   const y=viewDate.getFullYear(), m=viewDate.getMonth(), last=new Date(y,m+1,0).getDate();
   const gridDays = Array.from({length:last},(_,i)=> {
     const dStr = `${y}-${String(m+1).padStart(2,'0')}-${String(i+1).padStart(2,'0')}`;
     return { day: i+1, date: dStr, status: state.routineLogs[dStr] };
   });
 
-  return `${pageTitle('','🧴 Rutina y Bienestar','Lista de hoy y Habit Tracker mensual')}
-<div class="toolbar">${btn('＋ Añadir hábito hoy','btn btn-primary','data-action="add-routine"')}${btn('📚 Biblioteca de Rutinas','btn btn-soft','data-action="open-library"')}</div>
+  return `${pageTitle('','🧴 Rutina y Hábitos','Biblioteca de rutinas y Habit Tracker en cuadrícula')}
+<div class="toolbar">${btn('＋ Añadir tarea hoy','btn btn-primary','data-action="add-routine"')}${btn('📚 Biblioteca de Rutinas','btn btn-soft','data-action="open-library"')}</div>
 
 <div class="list" style="margin-top:14px">
-  ${rs.length?rs.map(r=>`<div class="item"><input class="checkbox" type="checkbox" ${r.done?'checked':''} data-action="toggle-routine" data-id="${r.id}"><div class="item-main"><strong style="text-decoration:${r.done?'line-through':'none'}">${esc(r.title)}</strong></div><button class="circle-btn" data-action="delete-routine" data-id="${r.id}">×</button></div>`).join(''):'<div class="empty">Sin hábitos asignados para hoy.</div>'}
+  ${rs.length?rs.map(r=>`<div class="item"><input class="checkbox" type="checkbox" ${r.done?'checked':''} data-action="toggle-routine" data-id="${r.id}"><div class="item-main"><strong style="text-decoration:${r.done?'line-through':'none'}">${esc(r.title)}</strong></div><button class="circle-btn" data-action="delete-routine" data-id="${r.id}">×</button></div>`).join(''):'<div class="empty">Sin tareas en la rutina de hoy.</div>'}
 </div>
 
-${pageTitle('','📊 Habit Tracker Mensual','🟢 Completado totalmente · 🔴 Incompleto / No hecho')}
+${pageTitle('','📊 Habit Tracker Mensual','🟢 Cumplido · 🔴 Incompleto / No hecho')}
 <div class="card">
   <div style="display:grid;grid-template-columns:repeat(7,1fr);gap:6px;text-align:center">
     ${gridDays.map(d=>{
       let bg = '#eee';
-      if(d.status === true) bg = '#a8e6cf'; // Verde
-      else if(d.status === false) bg = '#ff8b94'; // Rojo
+      if(d.status === true) bg = '#87e1b5'; // Verde
+      else if(d.status === false) bg = '#ff9aa2'; // Rojo
       const isToday = d.date === today;
-      return `<div style="background:${bg};padding:10px 4px;border-radius:8px;font-size:12px;font-weight:bold;${isToday?'border:2px solid var(--pink)':''}" title="${d.date}">${d.day}</div>`;
+      return `<div style="background:${bg};padding:10px 2px;border-radius:8px;font-size:12px;font-weight:bold;${isToday?'border:2px solid var(--pink)':''}" title="${d.date}">${d.day}</div>`;
     }).join('')}
   </div>
-  <div class="toolbar" style="margin-top:12px;justify-content:center">
-    ${btn('🟢 Marcar HOY Completado','btn','data-action="mark-tracker" data-status="true"')}
-    ${btn('🔴 Marcar HOY Incompleto','btn','data-action="mark-tracker" data-status="false"')}
+  <div class="toolbar" style="margin-top:14px;justify-content:center">
+    ${btn('🟢 Marcar HOY Verde (Cumplido)','btn','data-action="mark-tracker" data-status="true"')}
+    ${btn('🔴 Marcar HOY Rojo (Incompleto)','btn','data-action="mark-tracker" data-status="false"')}
   </div>
-</div>
-
-${pageTitle('','😊 Mood Tracker y Registro diario','')}
-<div class="card toolbar" style="justify-content:space-around">
-  ${MOODS.map(m=>`<button class="circle-btn" style="width:44px;height:44px;font-size:22px" data-action="set-mood" data-mood="${m}">${m}</button>`).join('')}
 </div>`;
 }
 
@@ -143,25 +121,55 @@ function schedule(){const times=['8:00','9:00','10:00','11:00','12:00','13:00','
 function study(){
   const dayTasks=state.tasks.filter(t=>t.date===studyDate);
   const mins = Math.floor(pomodoroTime / 60), secs = String(pomodoroTime % 60).padStart(2, '0');
-  const totalGrades = state.grades.reduce((acc,g)=>acc+Number(g.score),0);
-  const avgGrade = state.grades.length ? (totalGrades / state.grades.length).toFixed(2) : '-';
 
-  return `${pageTitle('','📚 Estudios','Pomodoro, notas y tareas')}
-<div class="toolbar">${btn('＋ Tarea','btn btn-primary','data-action="add-task"')}${btn('＋ Nota examen','btn','data-action="add-grade"')}${btn('＋ Entrega/Proyecto','btn','data-action="add-project"')}</div>
+  // Cálculo de Nota Media por Asignatura y Evaluaciones
+  let subjectAverages = [];
+  let globalSum = 0, globalCount = 0;
 
-<div class="grid" style="margin-top:14px">
-  <div class="card text-center"><h3>⏱️ Pomodoro</h3><b style="font-size:30px;font-family:Georgia,serif">${mins}:${secs}</b><div style="margin-top:6px">${btn(pomodoroTimer ? 'Pausar' : 'Empezar', 'btn btn-primary', 'data-action="toggle-pomodoro"')}</div></div>
-  <div class="card text-center"><h3>📊 Nota Media</h3><b style="font-size:30px;color:var(--pink)">${avgGrade}</b><p class="mini-note">${state.grades.length} exámenes</p></div>
+  SUBJECTS.forEach(sub => {
+    const subGrades = state.grades.filter(g => g.subject === sub);
+    if(subGrades.length) {
+      const sum = subGrades.reduce((a,b)=>a+Number(b.score),0);
+      const avg = sum / subGrades.length;
+      subjectAverages.push({ subject: sub, avg: avg.toFixed(2), count: subGrades.length });
+      globalSum += avg; globalCount++;
+    }
+  });
+
+  const finalAvg = globalCount ? (globalSum / globalCount).toFixed(2) : '-';
+
+  return `${pageTitle('','📚 Estudios','Pomodoro, notas por asignatura y entregas')}
+<div class="toolbar">${btn('＋ Tarea','btn btn-primary','data-action="add-task"')}${btn('＋ Añadir Nota Examen','btn','data-action="add-grade"')}${btn('＋ Proyecto / Entrega','btn','data-action="add-project"')}</div>
+
+<div class="card text-center" style="margin-top:14px;padding:24px">
+  <h3>⏱️ Temporizador Pomodoro</h3>
+  <div style="font-size:64px;font-weight:bold;font-family:Georgia,serif;color:var(--pink);margin:10px 0">${mins}:${secs}</div>
+  <div class="toolbar" style="justify-content:center">
+    ${btn(pomodoroTimer ? '⏸️ Pausar' : '▶️ Empezar', 'btn btn-primary', 'data-action="toggle-pomodoro"')}
+    ${btn('🔄 Reiniciar', 'btn btn-soft', 'data-action="reset-pomodoro"')}
+  </div>
 </div>
 
-${pageTitle('','🚀 Control de Entregas','Progreso de trabajos')}
-${state.projects.length?`<div class="list">${state.projects.map(p=>`<div class="card"><strong>${esc(p.title)}</strong> (${p.progress}%)<div style="background:var(--line);height:8px;border-radius:999px;margin:8px 0"><div style="background:var(--pink);width:${p.progress}%;height:100%;border-radius:999px"></div></div><button class="btn" data-action="step-project" data-id="${p.id}">＋ Avanzar 25%</button></div>`).join('')}</div>`:'<div class="empty">No tienes entregas o trabajos registrados.</div>'}
+${pageTitle('','📊 Nota Media de Bachillerato', `Media Global: ${finalAvg}`)}
+<div class="grid">
+  ${SUBJECTS.map(sub => {
+    const subGrades = state.grades.filter(g => g.subject === sub);
+    const avg = subGrades.length ? (subGrades.reduce((a,b)=>a+Number(b.score),0)/subGrades.length).toFixed(2) : '-';
+    return `<div class="card">
+      <strong>${sub}</strong>: <b style="color:var(--pink);font-size:18px">${avg}</b>
+      <div style="font-size:11px;margin-top:4px">${subGrades.map(g=>`E${g.eval}: <b>${g.score}</b>`).join(' | ')||"Sin notas"}</div>
+    </div>`;
+  }).join('')}
+</div>
+
+${pageTitle('','🚀 Control de Entregas y Trabajos','')}
+${state.projects.length?`<div class="list">${state.projects.map(p=>`<div class="card"><strong>${esc(p.title)}</strong> (${p.progress}%)<div style="background:var(--line);height:8px;border-radius:999px;margin:8px 0"><div style="background:var(--pink);width:${p.progress}%;height:100%;border-radius:999px"></div></div><button class="btn" data-action="step-project" data-id="${p.id}">＋ Avanzar 25%</button></div>`).join('')}</div>`:'<div class="empty">No tienes entregas registradas.</div>'}
 
 ${pageTitle('','Agenda Diaria', fmt(studyDate))}
 <div class="list">${dayTasks.length?dayTasks.map(t=>`<div class="item"><input class="checkbox" type="checkbox" ${t.done?'checked':''} data-action="toggle-task" data-id="${t.id}"><div class="item-main"><strong>${esc(t.title)}</strong><small>${esc(t.subject)}</small></div></div>`).join(''):'<div class="empty">Sin tareas para hoy.</div>'}`;
 }
 
-// --- MANEJO DE MODALES Y ACCIONES ---
+// --- LOGICA DE EVENTOS ---
 
 function applyTheme(){ document.documentElement.setAttribute('data-theme', state.theme || 'pastel'); }
 function render(){ applyTheme(); if(state.tab==='home')app.innerHTML=home(); else if(state.tab==='wardrobe')app.innerHTML=wardrobe(); else if(state.tab==='calendar')app.innerHTML=calendar(); else if(state.tab==='routine')app.innerHTML=routine(); else if(state.tab==='schedule')app.innerHTML=schedule(); else app.innerHTML=study(); }
@@ -171,9 +179,9 @@ function closeModal(){modal.classList.add('hidden');modal.innerHTML=''}
 
 function quickAdd(){openModal('Añadir a My Day',`<div class="grid"><div class="card feature" data-quick-go="wardrobe"><div class="emoji">👗</div><h3>Outfit</h3></div><div class="card feature" data-quick-go="calendar"><div class="emoji">📅</div><h3>Evento</h3></div><div class="card feature" data-quick-go="routine"><div class="emoji">✓</div><h3>Rutina</h3></div><div class="card feature" data-quick-go="study"><div class="emoji">📚</div><h3>Tarea</h3></div></div>`);}
 
-function addOutfit(){openModal('Nuevo conjunto cápsula',`<form id="outfitForm"><div class="form-grid"><div class="full"><label class="label">Nombre look</label><input class="input" name="name" required placeholder="Look cómodo clase"></div><div class="full"><label class="label">Prendas</label><textarea class="textarea" name="items" placeholder="Jeans anchos, top blanco..."></textarea></div><div><label class="label">Temporada</label><select class="select" name="season"><option value="Verano">☀️ Verano</option><option value="Invierno">❄️ Invierno</option></select></div><div><label class="label">Ocasión</label><select class="select" name="occasion"><option>Casual</option><option>Clase</option><option>Fiesta</option><option>Deporte</option><option>Especial</option></select></div><div><label class="label">Fecha</label><input class="input" type="date" name="date" value="${iso(new Date())}"></div></div><div style="margin-top:14px">${btn('Guardar look','btn btn-primary','type="submit"')}</div></form>`)}
+function addOutfit(){openModal('Nuevo conjunto',`<form id="outfitForm"><div class="form-grid"><div class="full"><label class="label">Nombre look</label><input class="input" name="name" required placeholder="Look clase"></div><div class="full"><label class="label">Prendas</label><textarea class="textarea" name="items" placeholder="Pantalón, camiseta..."></textarea></div><div><label class="label">Temporada</label><select class="select" name="season"><option value="Verano">☀️ Verano</option><option value="Invierno">❄️ Invierno</option></select></div><div><label class="label">Ocasión</label><select class="select" name="occasion"><option>Casual</option><option>Clase</option><option>Fiesta</option><option>Deporte</option></select></div><div><label class="label">Fecha</label><input class="input" type="date" name="date" value="${iso(new Date())}"></div></div><div style="margin-top:14px">${btn('Guardar','btn btn-primary','type="submit"')}</div></form>`)}
 function formEvent(date=''){openModal('Añadir evento',`<form id="eventForm"><div class="form-grid"><div class="full"><label class="label">Nombre</label><input class="input" name="title" required placeholder="Evento"></div><div><label class="label">Fecha</label><input class="input" type="date" name="date" value="${date||iso(new Date())}"></div><div><label class="label">Color</label><input class="color-input" type="color" name="color" value="#e98fae"></div></div><div style="margin-top:14px">${btn('Guardar','btn btn-primary','type="submit"')}</div></form>`)}
-function addRoutine(){openModal('Nueva rutina',`<form id="routineForm"><div class="form-grid"><div class="full"><label class="label">Tarea / Hábito para hoy</label><input class="input" name="title" required></div></div><div style="margin-top:14px">${btn('Añadir a hoy','btn btn-primary','type="submit"')}</div></form>`)}
+function addRoutine(){openModal('Nueva rutina hoy',`<form id="routineForm"><div class="form-grid"><div class="full"><label class="label">Tarea / Hábito</label><input class="input" name="title" required></div></div><div style="margin-top:14px">${btn('Guardar','btn btn-primary','type="submit"')}</div></form>`)}
 function addTask(){openModal('Nueva tarea',`<form id="taskForm"><div class="form-grid"><div class="full"><label class="label">Tarea</label><input class="input" name="title" required></div><div><label class="label">Asignatura</label><select class="select" name="subject">${SUBJECTS.map(s=>`<option>${s}</option>`).join('')}</select></div><div><label class="label">Fecha</label><input class="input" type="date" name="date" value="${studyDate}"></div></div><div style="margin-top:14px">${btn('Guardar','btn btn-primary','type="submit"')}</div></form>`)}
 
 app.addEventListener('click',e=>{
@@ -187,10 +195,9 @@ app.addEventListener('click',e=>{
   if(a==='close'){closeModal();return}
   if(a==='quick-add')quickAdd();
   else if(a==='set-season'){wardrobeSeason=b.dataset.season;render()}
-  else if(a==='set-occasion'){wardrobeOccasion=b.dataset.occ;render()}
   else if(a==='add-outfit')addOutfit();
   else if(a==='wear-outfit'){const o=state.outfits.find(x=>x.id===b.dataset.id);if(o){o.uses=(o.uses||0)+1;save();render();toast('¡Uso registrado!')}}
-  else if(a==='toggle-laundry'){const o=state.outfits.find(x=>x.id===b.dataset.id);if(o){o.inLaundry=!o.inLaundry;save();render();toast(o.inLaundry?'En lavadora 🧺':'¡Listo para usar! 🧼')}}
+  else if(a==='toggle-laundry'){const o=state.outfits.find(x=>x.id===b.dataset.id);if(o){o.inLaundry=!o.inLaundry;save();render();toast(o.inLaundry?'En lavadora 🧺':'Disponible 🧼')}}
   else if(a==='cal-prev'){viewDate=new Date(viewDate.getFullYear(),viewDate.getMonth()-1,1);render()}
   else if(a==='cal-next'){viewDate=new Date(viewDate.getFullYear(),viewDate.getMonth()+1,1);render()}
   else if(a==='day-click')formEvent(b.dataset.date);
@@ -198,26 +205,29 @@ app.addEventListener('click',e=>{
   else if(a==='add-routine')addRoutine();
   else if(a==='toggle-routine'){const r=state.routines.find(x=>x.id===b.dataset.id);if(r){r.done=b.checked;save()}}
   else if(a==='delete-routine'){state.routines=state.routines.filter(x=>x.id!==b.dataset.id);save();render()}
-  else if(a==='mark-tracker'){state.routineLogs[iso(new Date())] = (b.dataset.status === 'true'); save(); render(); toast('Día guardado en el tracker');}
+  else if(a==='mark-tracker'){state.routineLogs[iso(new Date())] = (b.dataset.status === 'true'); save(); render(); toast('Día guardado');}
   else if(a==='open-library'){
     openModal('📚 Biblioteca de Rutinas',`
-      <form id="libForm"><div class="form-grid"><div class="full"><input class="input" name="title" placeholder="Nombre rutina ej: Mañana Skincare" required></div></div><div style="margin-top:8px">${btn('Guardar en biblioteca','btn btn-primary','type="submit"')}</div></form>
+      <form id="libForm"><div class="form-grid"><div class="full"><input class="input" name="title" placeholder="Ej: Rutina Skincare Noche" required></div></div><div style="margin-top:8px">${btn('Guardar plantilla','btn btn-primary','type="submit"')}</div></form>
       <div class="list" style="margin-top:14px">
-        ${state.routineLibrary.length?state.routineLibrary.map(item=>`<div class="item"><div class="item-main"><strong>${esc(item.title)}</strong></div><button class="btn" data-action="use-lib" data-title="${esc(item.title)}">＋ Usar hoy</button></div>`).join(''):'<div class="empty">No tienes rutinas plantilla guardadas.</div>'}
+        ${state.routineLibrary.length?state.routineLibrary.map(item=>`<div class="item"><div class="item-main"><strong>${esc(item.title)}</strong></div><button class="btn" data-action="use-lib" data-title="${esc(item.title)}">＋ Usar hoy</button></div>`).join(''):'<div class="empty">Sin rutinas plantilla.</div>'}
       </div>
     `);
   }
-  else if(a==='use-lib'){state.routines.push({id:uid(),title:b.dataset.title,date:iso(new Date()),done:false});save();closeModal();render();toast('¡Añadida a tu lista de hoy!');}
+  else if(a==='use-lib'){state.routines.push({id:uid(),title:b.dataset.title,date:iso(new Date()),done:false});save();closeModal();render();toast('¡Añadida hoy!');}
   else if(a==='add-task')addTask();
   else if(a==='toggle-task'){const t=state.tasks.find(x=>x.id===b.dataset.id);if(t){t.done=b.checked;save()}}
-  else if(a==='add-grade'){openModal('Añadir Nota',`<form id="gradeForm"><div class="form-grid"><div><label class="label">Nota (0-10)</label><input class="input" type="number" step="0.1" name="score" required></div></div><div style="margin-top:14px">${btn('Guardar','btn btn-primary','type="submit"')}</div></form>`);}
+  else if(a==='add-grade'){
+    openModal('Añadir Nota de Examen',`<form id="gradeForm"><div class="form-grid"><div><label class="label">Asignatura</label><select class="select" name="subject">${SUBJECTS.map(s=>`<option>${s}</option>`).join('')}</select></div><div><label class="label">Evaluación</label><select class="select" name="eval"><option value="1">1ª Eval</option><option value="2">2ª Eval</option><option value="3">3ª Eval</option></select></div><div class="full"><label class="label">Nota (0-10)</label><input class="input" type="number" step="0.1" name="score" required></div></div><div style="margin-top:14px">${btn('Guardar Nota','btn btn-primary','type="submit"')}</div></form>`);
+  }
   else if(a==='add-project'){openModal('Nuevo Proyecto',`<form id="projectForm"><div class="form-grid"><div class="full"><label class="label">Título</label><input class="input" name="title" required></div></div><div style="margin-top:14px">${btn('Guardar','btn btn-primary','type="submit"')}</div></form>`);}
   else if(a==='step-project'){const p=state.projects.find(x=>x.id===b.dataset.id);if(p){p.progress=Math.min(100,(p.progress||0)+25);save();render()}}
   else if(a==='toggle-pomodoro'){
     if(pomodoroTimer){clearInterval(pomodoroTimer);pomodoroTimer=null;}
-    else{pomodoroTimer=setInterval(()=>{if(pomodoroTime>0)pomodoroTime--;else{clearInterval(pomodoroTimer);pomodoroTimer=null;}render();},1000);}
+    else{pomodoroTimer=setInterval(()=>{if(pomodoroTime>0){pomodoroTime--;render();}else{clearInterval(pomodoroTimer);pomodoroTimer=null;render();}},1000);}
     render();
   }
+  else if(a==='reset-pomodoro'){if(pomodoroTimer){clearInterval(pomodoroTimer);pomodoroTimer=null;}pomodoroTime=25*60;render();}
 });
 
 modal.addEventListener('submit',async e=>{
@@ -225,9 +235,9 @@ modal.addEventListener('submit',async e=>{
   if(f.id==='outfitForm'){state.outfits.push({id:uid(),name:fd.get('name'),items:fd.get('items'),season:fd.get('season'),occasion:fd.get('occasion'),date:fd.get('date'),uses:0,inLaundry:false});save();closeModal();render();}
   else if(f.id==='eventForm'){state.events.push({id:uid(),title:fd.get('title'),date:fd.get('date'),color:fd.get('color')});save();closeModal();render();}
   else if(f.id==='routineForm'){state.routines.push({id:uid(),title:fd.get('title'),date:iso(new Date()),done:false});save();closeModal();render();}
-  else if(f.id==='libForm'){state.routineLibrary.push({id:uid(),title:fd.get('title')});save();closeModal();render();toast('Guardada en plantilla');}
+  else if(f.id==='libForm'){state.routineLibrary.push({id:uid(),title:fd.get('title')});save();closeModal();render();toast('Guardada en biblioteca');}
   else if(f.id==='taskForm'){state.tasks.push({id:uid(),title:fd.get('title'),subject:fd.get('subject'),date:fd.get('date'),done:false});save();closeModal();render();}
-  else if(f.id==='gradeForm'){state.grades.push({id:uid(),score:fd.get('score')});save();closeModal();render();}
+  else if(f.id==='gradeForm'){state.grades.push({id:uid(),subject:fd.get('subject'),eval:fd.get('eval'),score:fd.get('score')});save();closeModal();render();}
   else if(f.id==='projectForm'){state.projects.push({id:uid(),title:fd.get('title'),progress:0});save();closeModal();render();}
 });
 
