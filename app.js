@@ -66,7 +66,7 @@ function wardrobe(){
   });
   const allItemsList = Array.from(allItemsSet);
 
-  // Función para ver si un outfit tiene alguna prenda en lavadora
+  // Función para ver si un outfit tiene alguna prenda en la lavadora
   const outfitHasDirtyItem = (o) => {
     if(!o.items) return false;
     const items = o.items.split(',').map(i=>i.trim());
@@ -80,24 +80,25 @@ function wardrobe(){
     return (o.name||'').toLowerCase().includes(query) || (o.items||'').toLowerCase().includes(query);
   });
   
+  // Outfits bloqueados por contener prendas en la colada
   const dirtyOutfits = state.outfits.filter(o => outfitHasDirtyItem(o));
 
   return `${pageTitle('','👗 Ropa y Estilo','Buscador, armario cápsula y lavadora por prendas')}
 <div class="toolbar">${btn('‹','btn','data-action="outfit-prev"')}${btn('Esta semana','btn','data-action="outfit-now"')}${btn('›','btn','data-action="outfit-next"')}${btn('＋ Añadir conjunto','btn btn-primary','data-action="add-outfit"')}</div>
-<div class="week-grid" style="margin-top:14px">${days.map((d,i)=>{const ds=iso(d), os=state.outfits.filter(o=>o.date===ds);return `<div class="week-col"><h4>${DAYS[i]} · ${d.getDate()}/${d.getMonth()+1}</h4>${os.length?os.map(o=>{ const isDirty = outfitHasDirtyItem(o); return `<div class="outfit" style="${isDirty?'opacity:0.5;border:1px dashed var(--pink)':''}"><strong>${esc(o.name)} ${isDirty?'🧺':''}</strong><small>${esc(o.items||'Sin prendas')}</small><div style="margin-top:7px;display:flex;gap:4px"><button class="circle-btn" style="width:auto;padding:0 8px;height:28px;font-size:11px" data-action="wear-outfit" data-id="${o.id}">👕 ${o.uses||0} usos</button></div></div>`}).join(''):'<div class="empty">Sin conjunto ✦</div>'}</div>`}).join('')}</div>
+<div class="week-grid" style="margin-top:14px">${days.map((d,i)=>{const ds=iso(d), os=state.outfits.filter(o=>o.date===ds);return `<div class="week-col"><h4>${DAYS[i]} · ${d.getDate()}/${d.getMonth()+1}</h4>${os.length?os.map(o=>{ const isDirty = outfitHasDirtyItem(o); return `<div class="outfit" style="${isDirty?'opacity:0.4;border:1px dashed var(--pink);background:#fff0f3':''}"><strong>${esc(o.name)} ${isDirty?'🧺 (En colada)':''}</strong><small>${esc(o.items||'Sin prendas')}</small><div style="margin-top:7px;display:flex;gap:4px"><button class="circle-btn" style="width:auto;padding:0 8px;height:28px;font-size:11px" data-action="wear-outfit" data-id="${o.id}" ${isDirty?'disabled':''}>👕 ${o.uses||0} usos</button></div></div>`}).join(''):'<div class="empty">Sin conjunto ✦</div>'}</div>`}).join('')}</div>
 
-${pageTitle('','🧺 Ropa en la Lavadora / Colada', 'Elegir prendas sucias para bloquear sus outfits')}
+${pageTitle('','🧺 Lavadora inteligente por prendas', 'Marca una prenda sucia y los conjuntos que la contengan se bloquearán automáticamente')}
 <div class="card" style="margin-bottom:12px">
-  <p style="font-size:13px;margin-bottom:8px">Selecciona las prendas que están sucias:</p>
+  <p style="font-size:13px;margin-bottom:8px;color:#555">Selecciona tus prendas para enviarlas a la colada:</p>
   <div style="display:flex;flex-wrap:wrap;gap:8px">
     ${allItemsList.length ? allItemsList.map(item => {
       const isDirty = (state.laundryItems || []).includes(item);
-      return `<button class="${isDirty ? 'btn btn-primary' : 'btn'}" data-action="toggle-item-laundry" data-item="${esc(item)}">${isDirty ? '🧺 ' + esc(item) + ' (En lavadora)' : '🧼 ' + esc(item)}</button>`;
-    }).join('') : '<small class="empty">Añade outfits para registrar tus prendas primero.</small>'}
+      return `<button class="${isDirty ? 'btn btn-primary' : 'btn'}" data-action="toggle-item-laundry" data-item="${esc(item)}">${isDirty ? '🧺 ' + esc(item) + ' (En colada)' : '🧼 ' + esc(item)}</button>`;
+    }).join('') : '<small class="empty">Registra conjuntos primero con prendas separadas por comas.</small>'}
   </div>
 </div>
 
-${dirtyOutfits.length ? `<div class="list"><strong>Outfits no disponibles actualmente:</strong>${dirtyOutfits.map(o=>`<div class="item"><div class="item-main"><strong>🧺 ${esc(o.name)}</strong><small>Tiene prendas en lavadora: ${esc(o.items)}</small></div></div>`).join('')}</div>` : '<div class="empty">Todos tus outfits están listos para usar.</div>'}
+${dirtyOutfits.length ? `<div class="list"><strong>Outfits bloqueados actualmente:</strong>${dirtyOutfits.map(o=>`<div class="item" style="border-left:3px solid var(--pink)"><div class="item-main"><strong>🧺 ${esc(o.name)}</strong><small>Contiene prenda en colada: ${esc(o.items)}</small></div></div>`).join('')}</div>` : '<div class="empty">Todos tus outfits están disponibles para usar.</div>'}
 
 ${pageTitle('','🗄️ Armario Virtual Completo','Buscador en vivo')}
 <div class="card" style="margin-bottom:12px">
@@ -107,7 +108,7 @@ ${pageTitle('','🗄️ Armario Virtual Completo','Buscador en vivo')}
   ${btn('☀️ Verano', wardrobeSeason==='Verano'?'btn btn-primary':'btn','data-action="set-season" data-season="Verano"')}
   ${btn('❄️ Invierno', wardrobeSeason==='Invierno'?'btn btn-primary':'btn','data-action="set-season" data-season="Invierno"')}
 </div>
-${filteredOutfits.length?`<div class="list">${filteredOutfits.map(o=>{ const isDirty = outfitHasDirtyItem(o); return `<div class="item"><div class="item-main"><strong>${esc(o.name)} ${isDirty?'(En colada 🧺)':''}</strong><small>Prendas: ${esc(o.items||'Sin detallar')} · 📌 ${esc(o.occasion||'Casual')} · <b>Puesto ${o.uses||0} veces</b></small></div><button class="btn" data-action="wear-outfit" data-id="${o.id}">＋1 Uso</button></div>`}).join('')}</div>`:'<div class="empty">No se encontraron prendas con la búsqueda aplicada.</div>'}`;
+${filteredOutfits.length?`<div class="list">${filteredOutfits.map(o=>{ const isDirty = outfitHasDirtyItem(o); return `<div class="item" style="${isDirty?'opacity:0.6':''}"><div class="item-main"><strong>${esc(o.name)} ${isDirty?'🧺 (No disponible)':''}</strong><small>Prendas: ${esc(o.items||'Sin detallar')} · 📌 ${esc(o.occasion||'Casual')} · <b>Puesto ${o.uses||0} veces</b></small></div><button class="btn" data-action="wear-outfit" data-id="${o.id}" ${isDirty?'disabled':''}>＋1 Uso</button></div>`}).join('')}</div>`:'<div class="empty">No se encontraron prendas con la búsqueda aplicada.</div>'}`;
 }
 
 function calendar(){
@@ -202,14 +203,14 @@ function study(){
 
   const courseGlobalAvg = activeSubjectsCount ? (totalSubjectAveragesSum / activeSubjectsCount).toFixed(2) : '-';
 
-  // Calendario mensual interactivo de repasos
+  // CALENDARIO INTERACTIVO DE REPASOS
   const ry=reviewCalendarDate.getFullYear(), rm=reviewCalendarDate.getMonth(), rfirst=new Date(ry,rm,1), rstart=(rfirst.getDay()+6)%7, rlast=new Date(ry,rm+1,0).getDate(), rcells=[];
   for(let i=0;i<rstart;i++)rcells.push(null);
   for(let d=1;d<=rlast;d++)rcells.push(new Date(ry,rm,d));
   while(rcells.length%7)rcells.push(null);
   const reviewMonthName=new Intl.DateTimeFormat('es-ES',{month:'long',year:'numeric'}).format(reviewCalendarDate);
 
-  return `${pageTitle('','📚 Estudios','Pomodoro, repasos en calendario y notas')}
+  return `${pageTitle('','📚 Estudios','Pomodoro, repasos en calendario interactivo y notas')}
 <div class="toolbar">${btn('＋ Tarea hoy','btn btn-primary','data-action="add-task"')}${btn('＋ Añadir Nota Examen','btn','data-action="add-grade"')}${btn('📖 Añadir Repaso','btn btn-soft','data-action="add-review"')}</div>
 
 <div class="card text-center" style="margin-top:14px;padding:20px">
@@ -221,9 +222,9 @@ function study(){
   </div>
 </div>
 
-${pageTitle('','🗓️ Calendario de Repasos Interactivo','Toca cualquier día para agendar un repaso')}
+${pageTitle('','🗓️ Calendario de Repasos Interactivo','Haz clic en cualquier día para agendar tema o asignatura')}
 <div class="calendar-head">${btn('‹','btn','data-action="rev-cal-prev"')}<h3 style="text-transform:capitalize;margin:0;font-family:Georgia,serif">${reviewMonthName}</h3>${btn('›','btn','data-action="rev-cal-next"')}</div>
-<div class="calendar-grid">${DAYS.map(d=>`<div class="dow">${d}</div>`).join('')}${rcells.map(d=>{if(!d)return '<div></div>';const ds=iso(d), revs=state.reviewDates.filter(r=>r.date===ds);const today=ds===iso(new Date());return `<div class="day ${today?'today':''}" data-action="click-review-day" data-date="${ds}"><div class="daynum">${d.getDate()}</div><div class="dots">${revs.map(()=>`<span class="dot" style="background:var(--pink)"></span>`).join('')}</div></div>`}).join('')}</div>
+<div class="calendar-grid">${DAYS.map(d=>`<div class="dow">${d}</div>`).join('')}${rcells.map(d=>{if(!d)return '<div></div>';const ds=iso(d), revs=state.reviewDates.filter(r=>r.date===ds);const today=ds===iso(new Date());return `<div class="day ${today?'today':''}" style="cursor:pointer" data-action="click-review-day" data-date="${ds}"><div class="daynum">${d.getDate()}</div><div class="dots">${revs.map(()=>`<span class="dot" style="background:var(--pink)"></span>`).join('')}</div></div>`}).join('')}</div>
 
 ${state.reviewDates.length?`<div class="list" style="margin-top:10px">${state.reviewDates.map(r=>`<div class="item"><div class="item-main"><strong>📖 ${esc(r.subject)}: ${esc(r.topic)}</strong><small>📅 Fecha: ${fmt(r.date)}</small></div><button class="circle-btn" data-action="delete-review" data-id="${r.id}">×</button></div>`).join('')}</div>`:'<div class="empty">No hay repasos agendados en el calendario.</div>'}
 
@@ -234,7 +235,7 @@ ${pageTitle('','Agenda de Tareas Diarias', fmt(studyDate))}
 <div class="list">${dayTasks.length?dayTasks.map(t=>`<div class="item"><input class="checkbox" type="checkbox" ${t.done?'checked':''} data-action="toggle-task" data-id="${t.id}"><div class="item-main"><strong>${esc(t.title)}</strong><small>${esc(t.subject)}</small></div></div>`).join(''):'<div class="empty">Sin tareas registradas para hoy.</div>'}`;
 }
 
-// --- LOGICA DE EVENTOS ---
+// --- MANEJO DE EVENTOS ---
 
 function applyTheme(){ document.documentElement.setAttribute('data-theme', state.theme || 'pastel'); }
 function render(){ applyTheme(); if(state.tab==='home')app.innerHTML=home(); else if(state.tab==='wardrobe')app.innerHTML=wardrobe(); else if(state.tab==='calendar')app.innerHTML=calendar(); else if(state.tab==='routine')app.innerHTML=routine(); else if(state.tab==='schedule')app.innerHTML=schedule(); else app.innerHTML=study(); }
@@ -248,7 +249,7 @@ function addOutfit(){openModal('Nuevo conjunto',`<form id="outfitForm"><div clas
 function formEvent(date=''){openModal('Añadir evento',`<form id="eventForm"><div class="form-grid"><div class="full"><label class="label">Nombre</label><input class="input" name="title" required placeholder="Evento"></div><div><label class="label">Fecha</label><input class="input" type="date" name="date" value="${date||iso(new Date())}"></div><div><label class="label">Color</label><input class="color-input" type="color" name="color" value="#e98fae"></div></div><div style="margin-top:14px">${btn('Guardar','btn btn-primary','type="submit"')}</div></form>`)}
 function addRoutine(){openModal('Nueva rutina hoy',`<form id="routineForm"><div class="form-grid"><div class="full"><label class="label">Tarea / Hábito</label><input class="input" name="title" required></div></div><div style="margin-top:14px">${btn('Guardar','btn btn-primary','type="submit"')}</div></form>`)}
 function addTask(){openModal('Nueva tarea',`<form id="taskForm"><div class="form-grid"><div class="full"><label class="label">Tarea</label><input class="input" name="title" required></div><div><label class="label">Asignatura</label><select class="select" name="subject">${SUBJECTS.map(s=>`<option>${s}</option>`).join('')}</select></div><div><label class="label">Fecha</label><input class="input" type="date" name="date" value="${studyDate}"></div></div><div style="margin-top:14px">${btn('Guardar','btn btn-primary','type="submit"')}</div></form>`)}
-function addReviewModal(date=''){openModal('Programar Repaso en Calendario',`<form id="reviewForm"><div class="form-grid"><div><label class="label">Asignatura</label><select class="select" name="subject">${SUBJECTS.map(s=>`<option>${s}</option>`).join('')}</select></div><div class="full"><label class="label">Tema a repasar</label><input class="input" name="topic" placeholder="Ej: Tema 2 - Funciones" required></div><div class="full"><label class="label">Fecha de repaso</label><input class="input" type="date" name="date" value="${date||iso(new Date())}" required></div></div><div style="margin-top:14px">${btn('Guardar Repaso','btn btn-primary','type="submit"')}</div></form>`);}
+function addReviewModal(date=''){openModal('Programar Repaso en Calendario',`<form id="reviewForm"><div class="form-grid"><div><label class="label">Asignatura</label><select class="select" name="subject">${SUBJECTS.map(s=>`<option>${s}</option>`).join('')}</select></div><div class="full"><label class="label">Tema o contenido a repasar</label><input class="input" name="topic" placeholder="Ej: Tema 3 - Derivadas" required></div><div class="full"><label class="label">Fecha de repaso</label><input class="input" type="date" name="date" value="${date||iso(new Date())}" required></div></div><div style="margin-top:14px">${btn('Guardar Repaso','btn btn-primary','type="submit"')}</div></form>`);}
 
 app.addEventListener('input',e=>{
   if(e.target.id==='wardrobeSearch'){
