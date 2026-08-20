@@ -1,4 +1,4 @@
-const KEY='my-day-state-v4';
+const KEY='my-day-state-v5';
 const SUBJECTS=['Matemáticas','Lengua','Química','Biología','Inglés','Filosofía','Historia'];
 const DAYS=['Lun','Mar','Mié','Jue','Vie','Sáb','Dom'];
 
@@ -37,11 +37,11 @@ function home(){
  <div class="stats"><div class="stat"><b>${ev}</b><small>eventos hoy</small></div><div class="stat"><b>${tasks}</b><small>tareas pendientes</small></div><div class="stat"><b>${done}</b><small>rutinas hechas</small></div></div>
  ${pageTitle('','Tu My Day','Cinco rincones para tenerlo todo bajo control')}
  <div class="grid">
- ${feature('👗','Ropa','Buscador de ropa, armario cápsula y lavadora.','wardrobe')}
+ ${feature('👗','Ropa','Buscador en vivo, armario cápsula y lavadora.','wardrobe')}
  ${feature('📅','Calendario','Eventos organizados por meses.','calendar')}
  ${feature('🧴','Rutina','Habit Tracker en cuadrícula mensual.','routine')}
  ${feature('🕰️','Horario','Tu horario semanal de Bachiller.','schedule')}
- ${feature('📚','Estudios','Pomodoro, medias por asignatura y calendario de repasos.','study')}
+ ${feature('📚','Estudios','Pomodoro, notas por 3 evaluaciones y repasos.','study')}
  </div><div class="footer-note">🎞️ ⭐️ 🎨 💅🏼 🪩 🍸 🌊 🐆 · My Day</div>`;
 }
 function feature(e,t,p,tab){return `<div class="card feature" data-tab-go="${tab}"><div class="emoji">${e}</div><h3>${t}</h3><p>${p}</p></div>`}
@@ -60,22 +60,22 @@ function wardrobe(){
   
   const laundryList = state.outfits.filter(o => o.inLaundry);
 
-  return `${pageTitle('','👗 Ropa y Estilo','Buscador, armario cápsula, lavadora y uso')}
+  return `${pageTitle('','👗 Ropa y Estilo','Buscador, armario cápsula, lavadora y recuento de uso')}
 <div class="toolbar">${btn('‹','btn','data-action="outfit-prev"')}${btn('Esta semana','btn','data-action="outfit-now"')}${btn('›','btn','data-action="outfit-next"')}${btn('＋ Añadir conjunto','btn btn-primary','data-action="add-outfit"')}</div>
 <div class="week-grid" style="margin-top:14px">${days.map((d,i)=>{const ds=iso(d), os=state.outfits.filter(o=>o.date===ds);return `<div class="week-col"><h4>${DAYS[i]} · ${d.getDate()}/${d.getMonth()+1}</h4>${os.length?os.map(o=>`<div class="outfit" style="${o.inLaundry?'opacity:0.5;border:1px dashed var(--pink)':''}"><strong>${esc(o.name)} ${o.inLaundry?'🧺':''}</strong><small>${esc(o.items||'Sin prendas')}</small><div style="margin-top:7px;display:flex;gap:4px"><button class="circle-btn" style="width:auto;padding:0 8px;height:28px;font-size:11px" data-action="wear-outfit" data-id="${o.id}">👕 ${o.uses||0} usos</button><button class="circle-btn" style="width:28px;height:28px;font-size:12px" data-action="toggle-laundry" data-id="${o.id}">${o.inLaundry?'🧼':'🧺'}</button></div></div>`).join(''):'<div class="empty">Sin conjunto ✦</div>'}</div>`}).join('')}</div>
 
 ${pageTitle('','🧺 Zona de Lavadora / Colada', 'Ropa en la colada (no disponible)')}
-${laundryList.length?`<div class="list">${laundryList.map(o=>`<div class="item"><div class="item-main"><strong>🧺 ${esc(o.name)}</strong><small>${esc(o.items)}</small></div><button class="btn" data-action="toggle-laundry" data-id="${o.id}">🧼 Sacar de la lavadora</button></div>`).join('')}</div>`:'<div class="empty">La lavadora está vacía. Toda tu ropa está lista.</div>'}
+${laundryList.length?`<div class="list">${laundryList.map(o=>`<div class="item"><div class="item-main"><strong>🧺 ${esc(o.name)}</strong><small>${esc(o.items)}</small></div><button class="btn" data-action="toggle-laundry" data-id="${o.id}">🧼 Sacar de la lavadora</button></div>`).join('')}</div>`:'<div class="empty">La lavadora está vacía. Toda tu ropa está lista para usar.</div>'}
 
 ${pageTitle('','🗄️ Armario Virtual Completo','Busca y filtra tus prendas')}
 <div class="card" style="margin-bottom:12px">
-  <input class="input" id="wardrobeSearch" placeholder="🔍 Buscar prendas u outfits..." value="${esc(wardrobeSearchQuery)}">
+  <input class="input" id="wardrobeSearch" placeholder="🔍 Buscar por ropa, look o prenda (ej: jeans, top...)" value="${esc(wardrobeSearchQuery)}">
 </div>
 <div class="toolbar" style="margin-bottom:8px">
   ${btn('☀️ Verano', wardrobeSeason==='Verano'?'btn btn-primary':'btn','data-action="set-season" data-season="Verano"')}
   ${btn('❄️ Invierno', wardrobeSeason==='Invierno'?'btn btn-primary':'btn','data-action="set-season" data-season="Invierno"')}
 </div>
-${filteredOutfits.length?`<div class="list">${filteredOutfits.map(o=>`<div class="item"><div class="item-main"><strong>${esc(o.name)} ${o.inLaundry?'(En lavadora 🧺)':''}</strong><small>Prendas: ${esc(o.items||'Sin detallar')} · 📌 ${esc(o.occasion||'Casual')} · <b>Puesto ${o.uses||0} veces</b></small></div><button class="btn" data-action="wear-outfit" data-id="${o.id}">＋1 Uso</button><button class="btn btn-soft" data-action="toggle-laundry" data-id="${o.id}">${o.inLaundry?'🧼 Sacar':'🧺 Lavar'}</button></div>`).join('')}</div>`:'<div class="empty">No se encontraron prendas con los filtros aplicados.</div>'}`;
+${filteredOutfits.length?`<div class="list">${filteredOutfits.map(o=>`<div class="item"><div class="item-main"><strong>${esc(o.name)} ${o.inLaundry?'(En lavadora 🧺)':''}</strong><small>Prendas: ${esc(o.items||'Sin detallar')} · 📌 ${esc(o.occasion||'Casual')} · <b>Puesto ${o.uses||0} veces</b></small></div><button class="btn" data-action="wear-outfit" data-id="${o.id}">＋1 Uso</button><button class="btn btn-soft" data-action="toggle-laundry" data-id="${o.id}">${o.inLaundry?'🧼 Sacar':'🧺 Lavar'}</button></div>`).join('')}</div>`:'<div class="empty">No se encontraron prendas con la búsqueda aplicada.</div>'}`;
 }
 
 function calendar(){
@@ -134,30 +134,45 @@ function study(){
   const dayTasks=state.tasks.filter(t=>t.date===studyDate);
   const mins = Math.floor(pomodoroTime / 60), secs = String(pomodoroTime % 60).padStart(2, '0');
 
-  // Medias calculadas independientemente por asignatura
-  let subjectAveragesSum = 0;
+  // Cálculo de notas por las 3 Evaluaciones por asignatura
+  let totalSubjectAveragesSum = 0;
   let activeSubjectsCount = 0;
 
   const subjectCardsHtml = SUBJECTS.map(sub => {
-    const subGrades = state.grades.filter(g => g.subject === sub);
-    let avgText = '-';
-    if(subGrades.length) {
-      const sum = subGrades.reduce((a,b)=>a+Number(b.score),0);
-      const avg = sum / subGrades.length;
-      avgText = avg.toFixed(2);
-      subjectAveragesSum += avg;
+    const e1Grades = state.grades.filter(g => g.subject === sub && String(g.eval) === '1');
+    const e2Grades = state.grades.filter(g => g.subject === sub && String(g.eval) === '2');
+    const e3Grades = state.grades.filter(g => g.subject === sub && String(g.eval) === '3');
+
+    const calcAvg = (arr) => arr.length ? (arr.reduce((a,b)=>a+Number(b.score),0)/arr.length) : null;
+
+    const avg1 = calcAvg(e1Grades);
+    const avg2 = calcAvg(e2Grades);
+    const avg3 = calcAvg(e3Grades);
+
+    // Media de las tres evaluaciones para esta asignatura
+    const evAvgs = [avg1, avg2, avg3].filter(v => v !== null);
+    const finalSubjectAvg = evAvgs.length ? (evAvgs.reduce((a,b)=>a+b,0) / evAvgs.length).toFixed(2) : '-';
+
+    if(evAvgs.length) {
+      totalSubjectAveragesSum += Number(finalSubjectAvg);
       activeSubjectsCount++;
     }
+
     return `<div class="card">
-      <strong>${sub}</strong>: <b style="color:var(--pink);font-size:18px">${avgText}</b>
-      <div style="font-size:11px;margin-top:4px">${subGrades.map(g=>`E${g.eval}: <b>${g.score}</b>`).join(' | ')||"Sin notas"}</div>
+      <strong style="font-size:16px">${sub}</strong>
+      <div style="font-size:22px;font-weight:bold;color:var(--pink);margin:4px 0">Nota Final: ${finalSubjectAvg}</div>
+      <div style="font-size:12px;color:#666">
+        1ª Eval: <b>${avg1 !== null ? avg1.toFixed(1) : '-'}</b> | 
+        2ª Eval: <b>${avg2 !== null ? avg2.toFixed(1) : '-'}</b> | 
+        3ª Eval: <b>${avg3 !== null ? avg3.toFixed(1) : '-'}</b>
+      </div>
     </div>`;
   }).join('');
 
-  const globalAvg = activeSubjectsCount ? (subjectAveragesSum / activeSubjectsCount).toFixed(2) : '-';
+  const courseGlobalAvg = activeSubjectsCount ? (totalSubjectAveragesSum / activeSubjectsCount).toFixed(2) : '-';
 
-  return `${pageTitle('','📚 Estudios','Pomodoro, repasos y notas por asignatura')}
-<div class="toolbar">${btn('＋ Tarea hoy','btn btn-primary','data-action="add-task"')}${btn('＋ Añadir Nota Examen','btn','data-action="add-grade"')}${btn('📖 Añadir Repaso','btn btn-soft','data-action="add-review"')}</div>
+  return `${pageTitle('','📚 Estudios','Pomodoro, notas por evaluación y calendario de repasos')}
+<div class="toolbar">${btn('＋ Tarea hoy','btn btn-primary','data-action="add-task"')}${btn('＋ Añadir Nota Examen','btn','data-action="add-grade"')}${btn('📖 Programar Repaso','btn btn-soft','data-action="add-review"')}</div>
 
 <div class="card text-center" style="margin-top:14px;padding:24px">
   <h3>⏱️ Temporizador Pomodoro</h3>
@@ -168,11 +183,11 @@ function study(){
   </div>
 </div>
 
-${pageTitle('','📊 Notas por Asignatura', `Media Global: ${globalAvg}`)}
+${pageTitle('','📊 Control de Notas (1ª, 2ª y 3ª Evaluación)', `Media Curso: ${courseGlobalAvg}`)}
 <div class="grid">${subjectCardsHtml}</div>
 
-${pageTitle('','📖 Calendario de Repasos Pendientes','Planifica qué estudiar cada día')}
-${state.reviewDates.length?`<div class="list">${state.reviewDates.map(r=>`<div class="item"><div class="item-main"><strong>📖 ${esc(r.subject)} - ${esc(r.topic)}</strong><small>📅 Fecha de repaso: ${fmt(r.date)}</small></div><button class="circle-btn" data-action="delete-review" data-id="${r.id}">×</button></div>`).join('')}</div>`:'<div class="empty">No tienes fechas de repaso programadas.</div>'}
+${pageTitle('','📖 Calendario de Repasos Programados','Organiza qué repasar cada día')}
+${state.reviewDates.length?`<div class="list">${state.reviewDates.map(r=>`<div class="item"><div class="item-main"><strong>📖 ${esc(r.subject)} - ${esc(r.topic)}</strong><small>📅 Fecha: ${fmt(r.date)}</small></div><button class="circle-btn" data-action="delete-review" data-id="${r.id}">×</button></div>`).join('')}</div>`:'<div class="empty">No tienes repasos programados por el momento.</div>'}
 
 ${pageTitle('','Agenda de Tareas Diarias', fmt(studyDate))}
 <div class="list">${dayTasks.length?dayTasks.map(t=>`<div class="item"><input class="checkbox" type="checkbox" ${t.done?'checked':''} data-action="toggle-task" data-id="${t.id}"><div class="item-main"><strong>${esc(t.title)}</strong><small>${esc(t.subject)}</small></div></div>`).join(''):'<div class="empty">Sin tareas registradas para hoy.</div>'}`;
@@ -188,13 +203,18 @@ function closeModal(){modal.classList.add('hidden');modal.innerHTML=''}
 
 function quickAdd(){openModal('Añadir a My Day',`<div class="grid"><div class="card feature" data-quick-go="wardrobe"><div class="emoji">👗</div><h3>Outfit</h3></div><div class="card feature" data-quick-go="calendar"><div class="emoji">📅</div><h3>Evento</h3></div><div class="card feature" data-quick-go="routine"><div class="emoji">✓</div><h3>Rutina</h3></div><div class="card feature" data-quick-go="study"><div class="emoji">📚</div><h3>Tarea</h3></div></div>`);}
 
-function addOutfit(){openModal('Nuevo conjunto',`<form id="outfitForm"><div class="form-grid"><div class="full"><label class="label">Nombre look</label><input class="input" name="name" required placeholder="Look cómodo clase"></div><div class="full"><label class="label">Prendas</label><textarea class="textarea" name="items" placeholder="Jeans, top blanco, chaqueta..."></textarea></div><div><label class="label">Temporada</label><select class="select" name="season"><option value="Verano">☀️ Verano</option><option value="Invierno">❄️ Invierno</option></select></div><div><label class="label">Ocasión</label><select class="select" name="occasion"><option>Casual</option><option>Clase</option><option>Fiesta</option><option>Deporte</option></select></div><div><label class="label">Fecha</label><input class="input" type="date" name="date" value="${iso(new Date())}"></div></div><div style="margin-top:14px">${btn('Guardar','btn btn-primary','type="submit"')}</div></form>`)}
+function addOutfit(){openModal('Nuevo conjunto',`<form id="outfitForm"><div class="form-grid"><div class="full"><label class="label">Nombre look</label><input class="input" name="name" required placeholder="Look clase"></div><div class="full"><label class="label">Prendas</label><textarea class="textarea" name="items" placeholder="Jeans, camiseta blanca, zapatillas..."></textarea></div><div><label class="label">Temporada</label><select class="select" name="season"><option value="Verano">☀️ Verano</option><option value="Invierno">❄️ Invierno</option></select></div><div><label class="label">Ocasión</label><select class="select" name="occasion"><option>Casual</option><option>Clase</option><option>Fiesta</option><option>Deporte</option></select></div><div><label class="label">Fecha</label><input class="input" type="date" name="date" value="${iso(new Date())}"></div></div><div style="margin-top:14px">${btn('Guardar','btn btn-primary','type="submit"')}</div></form>`)}
 function formEvent(date=''){openModal('Añadir evento',`<form id="eventForm"><div class="form-grid"><div class="full"><label class="label">Nombre</label><input class="input" name="title" required placeholder="Evento"></div><div><label class="label">Fecha</label><input class="input" type="date" name="date" value="${date||iso(new Date())}"></div><div><label class="label">Color</label><input class="color-input" type="color" name="color" value="#e98fae"></div></div><div style="margin-top:14px">${btn('Guardar','btn btn-primary','type="submit"')}</div></form>`)}
 function addRoutine(){openModal('Nueva rutina hoy',`<form id="routineForm"><div class="form-grid"><div class="full"><label class="label">Tarea / Hábito</label><input class="input" name="title" required></div></div><div style="margin-top:14px">${btn('Guardar','btn btn-primary','type="submit"')}</div></form>`)}
 function addTask(){openModal('Nueva tarea',`<form id="taskForm"><div class="form-grid"><div class="full"><label class="label">Tarea</label><input class="input" name="title" required></div><div><label class="label">Asignatura</label><select class="select" name="subject">${SUBJECTS.map(s=>`<option>${s}</option>`).join('')}</select></div><div><label class="label">Fecha</label><input class="input" type="date" name="date" value="${studyDate}"></div></div><div style="margin-top:14px">${btn('Guardar','btn btn-primary','type="submit"')}</div></form>`)}
 
 app.addEventListener('input',e=>{
-  if(e.target.id==='wardrobeSearch'){wardrobeSearchQuery=e.target.value;render();const input=document.getElementById('wardrobeSearch');if(input){input.focus();input.setSelectionRange(input.value.length,input.value.length);}}
+  if(e.target.id==='wardrobeSearch'){
+    wardrobeSearchQuery=e.target.value;
+    render();
+    const input=document.getElementById('wardrobeSearch');
+    if(input){input.focus();input.setSelectionRange(input.value.length,input.value.length);}
+  }
 });
 
 app.addEventListener('click',e=>{
@@ -218,7 +238,7 @@ app.addEventListener('click',e=>{
   else if(a==='add-routine')addRoutine();
   else if(a==='toggle-routine'){const r=state.routines.find(x=>x.id===b.dataset.id);if(r){r.done=b.checked;save()}}
   else if(a==='delete-routine'){state.routines=state.routines.filter(x=>x.id!==b.dataset.id);save();render()}
-  else if(a==='mark-tracker'){state.routineLogs[iso(new Date())] = (b.dataset.status === 'true'); save(); render(); toast('Día guardado');}
+  else if(a==='mark-tracker'){state.routineLogs[iso(new Date())] = (b.dataset.status === 'true'); save(); render(); toast('Día guardado en el tracker');}
   else if(a==='open-library'){
     openModal('📚 Biblioteca de Rutinas',`
       <form id="libForm"><div class="form-grid"><div class="full"><input class="input" name="title" placeholder="Ej: Rutina Skincare Noche" required></div></div><div style="margin-top:8px">${btn('Guardar plantilla','btn btn-primary','type="submit"')}</div></form>
@@ -234,7 +254,7 @@ app.addEventListener('click',e=>{
     openModal('Añadir Nota de Examen',`<form id="gradeForm"><div class="form-grid"><div><label class="label">Asignatura</label><select class="select" name="subject">${SUBJECTS.map(s=>`<option>${s}</option>`).join('')}</select></div><div><label class="label">Evaluación</label><select class="select" name="eval"><option value="1">1ª Eval</option><option value="2">2ª Eval</option><option value="3">3ª Eval</option></select></div><div class="full"><label class="label">Nota (0-10)</label><input class="input" type="number" step="0.1" name="score" required></div></div><div style="margin-top:14px">${btn('Guardar Nota','btn btn-primary','type="submit"')}</div></form>`);
   }
   else if(a==='add-review'){
-    openModal('Programar Repaso',`<form id="reviewForm"><div class="form-grid"><div><label class="label">Asignatura</label><select class="select" name="subject">${SUBJECTS.map(s=>`<option>${s}</option>`).join('')}</select></div><div class="full"><label class="label">Tema / Contenido</label><input class="input" name="topic" placeholder="Ej: Tema 3 - Integrales" required></div><div class="full"><label class="label">Fecha de repasos</label><input class="input" type="date" name="date" value="${iso(new Date())}" required></div></div><div style="margin-top:14px">${btn('Guardar Repaso','btn btn-primary','type="submit"')}</div></form>`);
+    openModal('Programar Repaso',`<form id="reviewForm"><div class="form-grid"><div><label class="label">Asignatura</label><select class="select" name="subject">${SUBJECTS.map(s=>`<option>${s}</option>`).join('')}</select></div><div class="full"><label class="label">Tema / Contenido</label><input class="input" name="topic" placeholder="Ej: Tema 2 - Derivadas" required></div><div class="full"><label class="label">Fecha de repaso</label><input class="input" type="date" name="date" value="${iso(new Date())}" required></div></div><div style="margin-top:14px">${btn('Guardar Repaso','btn btn-primary','type="submit"')}</div></form>`);
   }
   else if(a==='delete-review'){state.reviewDates=state.reviewDates.filter(x=>x.id!==b.dataset.id);save();render();}
   else if(a==='toggle-pomodoro'){
