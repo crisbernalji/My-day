@@ -1,8 +1,12 @@
 const KEY='my-day-state-v1';
 const SUBJECTS=['Matemáticas','Lengua','Química','Biología','Inglés','Filosofía','Historia'];
-const COLORS=['#e98fae','#b8a8df','#9fd9d4','#e8b65b','#9db9e8','#a8c98d','#e5a78e'];
 const DAYS=['Lun','Mar','Mié','Jue','Vie','Sáb','Dom'];
-const state=JSON.parse(localStorage.getItem(KEY)||'null')||{events:[],outfits:[],routines:[],tasks:[],schedule:{},notes:[],favorites:[],reminders:[],theme:'pastel',tab:'home'};
+const MOODS=['😄','🙂','😐','😔','😫'];
+
+const state=JSON.parse(localStorage.getItem(KEY)||'null')||{
+  events:[], outfits:[], routines:[], tasks:[], schedule:{}, notes:[], favorites:[],
+  theme:'pastel', tab:'home', grades:[], projects:[], moodLogs:{}, waterLogs:{}, sleepLogs:{}
+};
 const app=document.getElementById('app'), modal=document.getElementById('modal');
 
 let viewDate=new Date(); if(viewDate.getFullYear()<2026)viewDate=new Date(2026,0,1);
@@ -13,9 +17,7 @@ let wardrobeSeason='Verano';
 let wardrobeOccasion='Todas';
 
 // Temporizador Pomodoro
-let pomodoroTime = 25 * 60;
-let pomodoroTimer = null;
-let pomodoroIsWork = true;
+let pomodoroTime = 25 * 60, pomodoroTimer = null, pomodoroIsWork = true;
 
 function save(){localStorage.setItem(KEY,JSON.stringify(state));}
 function esc(s=''){return String(s).replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[m]));}
@@ -27,6 +29,8 @@ function setTab(t){state.tab=t;save();document.querySelectorAll('.nav-item').for
 function btn(t,cls='btn btn-primary',attr=''){return `<button class="${cls}" ${attr}>${t}</button>`}
 function pageTitle(k,title,sub){return `<div class="section-title"><div><h2>${title}</h2><span>${sub||''}</span></div></div>`}
 
+// --- SECCIONES ---
+
 function home(){
  const today=iso(new Date()), ev=state.events.filter(e=>e.date===today).length, tasks=state.tasks.filter(t=>t.date===today&&!t.done).length, done=state.routines.filter(r=>r.date===today&&r.done).length;
  return `<section class="hero"><div class="eyebrow">My Day ✦ ${fmt(new Date())}</div><h1>Tu día, tu estilo.</h1><p>Organiza tus looks, fechas, rutinas, clases y tardes de estudio en un solo lugar.</p><div class="hero-actions">${btn('＋ Añadir algo','btn btn-primary','data-action="quick-add"')}${btn('🔔 Recordatorios','btn btn-soft','data-action="notify"')}</div></section>
@@ -34,7 +38,11 @@ function home(){
  <div class="stats"><div class="stat"><b>${ev}</b><small>eventos hoy</small></div><div class="stat"><b>${tasks}</b><small>tareas pendientes</small></div><div class="stat"><b>${done}</b><small>rutinas hechas</small></div></div>
  ${pageTitle('','Tu My Day','Cinco rincones para tenerlo todo bajo control')}
  <div class="grid">
- ${feature('👗','Ropa','Outfits semanales, armario por temporadas, ocasión e historial.','wardrobe')}${feature('📅','Calendario','Eventos organizados por meses con colores.','calendar')}${feature('🧴','Rutina','Checklists diarias y rastreador de hábitos (Habit Tracker).','routine')}${feature('🕰️','Horario','Tu horario semanal de Bachiller.','schedule')}${feature('📚','Estudios','Agenda diaria, temporizador Pomodoro, exámenes y apuntes.','study')}
+ ${feature('👗','Ropa','Armario cápsula, temporadas, ocasión y contador de uso.','wardrobe')}
+ ${feature('📅','Calendario','Eventos organizados por meses con colores.','calendar')}
+ ${feature('🧴','Rutina','Habit Tracker, Mood Tracker, agua y sueño.','routine')}
+ ${feature('🕰️','Horario','Tu horario semanal de Bachiller.','schedule')}
+ ${feature('📚','Estudios','Pomodoro, nota media, entregas y apuntes.','study')}
  </div><div class="footer-note">🎞️ ⭐️ 🎨 💅🏼 🪩 🍸 🌊 🐆 · My Day</div>`;
 }
 function feature(e,t,p,tab){return `<div class="card feature" data-tab-go="${tab}"><div class="emoji">${e}</div><h3>${t}</h3><p>${p}</p></div>`}
@@ -43,45 +51,34 @@ function wardrobe(){
   const monday=new Date(outfitWeek); 
   monday.setDate(monday.getDate()-((monday.getDay()+6)%7));
   const days=Array.from({length:7},(_,i)=>new Date(monday.getFullYear(),monday.getMonth(),monday.getDate()+i));
-
   const query=wardrobeSearchQuery.trim().toLowerCase();
   
   const filteredOutfits=state.outfits.filter(o=>{
-    const itemSeason = o.season || 'Verano';
-    const itemOccasion = o.occasion || 'Casual';
-    if(itemSeason !== wardrobeSeason) return false;
-    if(wardrobeOccasion !== 'Todas' && itemOccasion !== wardrobeOccasion) return false;
+    if((o.season||'Verano') !== wardrobeSeason) return false;
+    if(wardrobeOccasion !== 'Todas' && (o.occasion||'Casual') !== wardrobeOccasion) return false;
     if(!query) return true;
-    const matchName=(o.name||'').toLowerCase().includes(query);
-    const matchContext=(o.context||'').toLowerCase().includes(query);
-    return matchName || matchContext;
+    return (o.name||'').toLowerCase().includes(query) || (o.items||'').toLowerCase().includes(query);
   });
 
   const occasions = ['Todas', 'Clase', 'Casual', 'Fiesta', 'Deporte', 'Especial'];
 
-  return `${pageTitle('','👗 Ropa','Tu armario organizado por semanas, temporadas y ocasión')}
+  return `${pageTitle('','👗 Ropa y Estilo','Armario cápsula por semanas y contador de uso')}
 <div class="toolbar">${btn('‹','btn','data-action="outfit-prev"')}${btn('Esta semana','btn','data-action="outfit-now"')}${btn('›','btn','data-action="outfit-next"')}${btn('＋ Añadir conjunto','btn btn-primary','data-action="add-outfit"')}</div>
-<div class="week-grid" style="margin-top:14px">${days.map((d,i)=>{const ds=iso(d), os=state.outfits.filter(o=>o.date===ds);return `<div class="week-col"><h4>${DAYS[i]} · ${d.getDate()}/${d.getMonth()+1}</h4>${os.length?os.map(o=>`<div class="outfit"><strong>${esc(o.name)}</strong><small>${esc(o.context||'Sin etiqueta')} · ${o.season==='Invierno'?'❄️':'☀️'} · ${esc(o.occasion||'Casual')}</small><div style="margin-top:7px"><button class="circle-btn" style="width:28px;height:28px;font-size:12px" data-action="fav-outfit" data-id="${o.id}">${o.favorite?'❤️':'♡'}</button></div></div>`).join(''):'<div class="empty">Sin conjunto ✦</div>'}</div>`}).join('')}</div>
+<div class="week-grid" style="margin-top:14px">${days.map((d,i)=>{const ds=iso(d), os=state.outfits.filter(o=>o.date===ds);return `<div class="week-col"><h4>${DAYS[i]} · ${d.getDate()}/${d.getMonth()+1}</h4>${os.length?os.map(o=>`<div class="outfit"><strong>${esc(o.name)}</strong><small>${esc(o.items||'Sin prendas')} · ${o.season==='Invierno'?'❄️':'☀️'}</small><div style="margin-top:7px;display:flex;gap:4px"><button class="circle-btn" style="width:28px;height:28px;font-size:12px" data-action="wear-outfit" data-id="${o.id}">👕 ${o.uses||0}</button><button class="circle-btn" style="width:28px;height:28px;font-size:12px" data-action="fav-outfit" data-id="${o.id}">${o.favorite?'❤️':'♡'}</button></div></div>`).join(''):'<div class="empty">Sin conjunto ✦</div>'}</div>`}).join('')}</div>
 
-${pageTitle('','🗄️ Armario Virtual Completo','Filtra tus outfits por época del año y tipo de ocasión')}
-
-<div class="toolbar" style="margin-bottom:10px">
+${pageTitle('','🗄️ Armario Virtual Completo','Filtra tus prendas cápsula por temporada y ocasión')}
+<div class="toolbar" style="margin-bottom:8px">
   ${btn('☀️ Verano', wardrobeSeason==='Verano'?'btn btn-primary':'btn','data-action="set-season" data-season="Verano"')}
   ${btn('❄️ Invierno', wardrobeSeason==='Invierno'?'btn btn-primary':'btn','data-action="set-season" data-season="Invierno"')}
 </div>
-
 <div class="toolbar" style="margin-bottom:12px">
   ${occasions.map(occ=>btn(occ, wardrobeOccasion===occ?'btn btn-soft-active':'btn','data-action="set-occasion" data-occ="'+occ+'"')).join('')}
 </div>
-
 <div class="card" style="margin-bottom:14px">
-  <input class="input" type="text" id="wardrobeSearchInput" placeholder="Buscar prenda o concepto en ${wardrobeSeason.toLowerCase()}..." value="${esc(wardrobeSearchQuery)}">
+  <input class="input" type="text" id="wardrobeSearchInput" placeholder="Buscar prenda en cápsula..." value="${esc(wardrobeSearchQuery)}">
 </div>
-
-${filteredOutfits.length?`<div class="list">${filteredOutfits.map(o=>`<div class="item"><div class="item-main"><strong>${esc(o.name)}</strong><small>${fmt(o.date)}${o.context?' · '+esc(o.context):''} · ${o.season==='Invierno'?'❄️ Invierno':'☀️ Verano'} · 📌 ${esc(o.occasion||'Casual')}</small></div><button class="circle-btn" style="width:32px;height:32px" data-action="fav-outfit" data-id="${o.id}">${o.favorite?'❤️':'♡'}</button></div>`).join('')}</div>`:'<div class="empty">No hay outfits guardados con esos filtros.</div>'}
-
-${pageTitle('','❤️ Favoritos','Tus looks destacados')}${state.outfits.filter(o=>o.favorite).length?`<div class="list">${state.outfits.filter(o=>o.favorite).map(o=>`<div class="item"><div class="item-main"><strong>${esc(o.name)}</strong><small>${fmt(o.date)} · ${esc(o.context||'')} (${o.season||'Verano'} - ${o.occasion||'Casual'})</small></div><span>❤️</span></div>`).join('')}</div>`:'<div class="empty">Marca tus favoritos y aparecerán aquí.</div>'}
-${pageTitle('','🕘 Historial','Semanas anteriores guardadas')}${state.outfits.length?`<div class="list">${[...new Set(state.outfits.map(o=>o.date.slice(0,7)))].sort().reverse().map(m=>`<div class="item"><div class="item-main"><strong>${m}</strong><small>${state.outfits.filter(o=>o.date.startsWith(m)).length} conjuntos guardados</small></div></div>`).join('')}</div>`:'<div class="empty">Tu historial aparecerá cuando guardes looks.</div>'}`}
+${filteredOutfits.length?`<div class="list">${filteredOutfits.map(o=>`<div class="item"><div class="item-main"><strong>${esc(o.name)}</strong><small>Prendas: ${esc(o.items||'No especificadas')} · 📌 ${esc(o.occasion||'Casual')} · Usado: ${o.uses||0} veces</small></div><button class="btn" data-action="wear-outfit" data-id="${o.id}">+1 Uso</button></div>`).join('')}</div>`:'<div class="empty">No hay prendas guardadas con ese filtro.</div>'}`;
+}
 
 function calendar(){
   const y=viewDate.getFullYear(),m=viewDate.getMonth(),first=new Date(y,m,1),start=(first.getDay()+6)%7,last=new Date(y,m+1,0).getDate(),cells=[];
@@ -94,128 +91,83 @@ function calendar(){
 
   return `${pageTitle('','📅 Calendario','Eventos organizados por meses')}
 <div class="calendar-head">${btn('‹','btn','data-action="cal-prev"')}<h3 style="text-transform:capitalize;margin:0;font-family:Georgia,serif">${monthName}</h3>${btn('›','btn','data-action="cal-next"')}</div>
-<div class="calendar-grid">${DAYS.map(d=>`<div class="dow">${d}</div>`).join('')}${cells.map(d=>{if(!d)return '<div></div>';const ds=iso(d),es=state.events.filter(e=>e.date===ds);const today=ds===iso(new Date());return `<div class="day ${today?'today':''}" data-action="day-click" data-date="${ds}"><div class="daynum">${d.getDate()}</div><div class="dots">${es.map(e=>`<span class="dot" style="background:${e.color}" title="${esc(e.title)}"></span>`).join('')}</div></div>`}).join('')}</div>
-${pageTitle('','Eventos de este mes','Lista detallada del mes en pantalla')}
-${monthEvents.length?`<div class="list">${monthEvents.slice().sort((a,b)=>a.date.localeCompare(b.date)).map(e=>`<div class="event-row"><span class="color-dot" style="background:${e.color}"></span><div class="item-main"><strong>${esc(e.title)}</strong><small>${fmt(e.date)}${e.time?' · '+e.time:''}${e.reminder?' · 🔔 '+e.reminder:''}</small></div><button class="circle-btn" style="width:32px;height:32px" data-action="delete-event" data-id="${e.id}">×</button></div>`).join('')}</div>`:'<div class="empty">No hay eventos guardados en este mes.</div>'}`}
+<div class="calendar-grid">${DAYS.map(d=>`<div class="dow">${d}</div>`).join('')}${cells.map(d=>{if(!d)return '<div></div>';const ds=iso(d),es=state.events.filter(e=>e.date===ds);const today=ds===iso(new Date());return `<div class="day ${today?'today':''}" data-action="day-click" data-date="${ds}"><div class="daynum">${d.getDate()}</div><div class="dots">${es.map(e=>`<span class="dot" style="background:${e.color}"></span>`).join('')}</div></div>`}).join('')}</div>
+${pageTitle('','Eventos de este mes','')}
+${monthEvents.length?`<div class="list">${monthEvents.map(e=>`<div class="event-row"><span class="color-dot" style="background:${e.color}"></span><div class="item-main"><strong>${esc(e.title)}</strong><small>${fmt(e.date)} ${e.time||''}</small></div><button class="circle-btn" data-action="delete-event" data-id="${e.id}">×</button></div>`).join('')}</div>`:'<div class="empty">No hay eventos guardados este mes.</div>'}`;
+}
 
 function routine(){
   const today=iso(new Date());
   let rs=state.routines.filter(r=>r.date===today);
-  
-  // Lógica del Habit Tracker (Últimos 7 días)
-  const last7Days = Array.from({length:7}, (_,i)=>{
-    const d = new Date(); d.setDate(d.getDate() - (6 - i));
-    return iso(d);
-  });
+  const curMood = state.moodLogs[today] || ' Sin registrar';
+  const curWater = state.waterLogs[today] || 0;
+  const curSleep = state.sleepLogs[today] || 0;
 
-  return `${pageTitle('','🧴 Rutina','Checklist diaria manual y seguimiento')}
+  return `${pageTitle('','🧴 Rutina y Bienestar','Hábitos, ánimo y registros de un toque')}
 <div class="toolbar">${btn('＋ Nueva tarea','btn btn-primary','data-action="add-routine"')}${btn('🔔 Recordatorios','btn','data-action="notify"')}</div>
-<div class="list" style="margin-top:14px">${rs.length?rs.map(r=>`<div class="item"><input class="checkbox" type="checkbox" ${r.done?'checked':''} data-action="toggle-routine" data-id="${r.id}"><div class="item-main"><strong style="text-decoration:${r.done?'line-through':'none'}">${esc(r.title)}</strong><small>${r.time?'A las '+r.time:'Sin hora'}</small></div><button class="circle-btn" style="width:32px;height:32px" data-action="delete-routine" data-id="${r.id}">×</button></div>`).join(''):'<div class="empty">Añade tus tareas diarias de forma manual para completar tu rutina. ✦</div>'}</div>
+<div class="list" style="margin-top:14px">${rs.length?rs.map(r=>`<div class="item"><input class="checkbox" type="checkbox" ${r.done?'checked':''} data-action="toggle-routine" data-id="${r.id}"><div class="item-main"><strong style="text-decoration:${r.done?'line-through':'none'}">${esc(r.title)}</strong></div><button class="circle-btn" data-action="delete-routine" data-id="${r.id}">×</button></div>`).join(''):'<div class="empty">Añade tareas a tu rutina.</div>'}</div>
 
-${pageTitle('','📊 Habit Tracker','Tu constancia en los últimos 7 días')}
-<div class="card">
-  <div class="tracker-grid">
-    ${last7Days.map(d => {
-      const dayName = DAYS[(new Date(d).getDay() + 6) % 7];
-      const count = state.routines.filter(r => r.date === d && r.done).length;
-      return `<div class="tracker-col"><small>${dayName}</small><div class="tracker-bar" style="height:${Math.min(count * 20 + 10, 80)}px; background:${count>0?'var(--pink)':'var(--line)'}"></div><strong>${count}</strong></div>`;
-    }).join('')}
+${pageTitle('','😊 Mood Tracker','¿Cómo te has sentido hoy?')}
+<div class="card toolbar" style="justify-content:space-around">
+  ${MOODS.map(m=>`<button class="circle-btn" style="width:48px;height:48px;font-size:24px" data-action="set-mood" data-mood="${m}">${m}</button>`).join('')}
+  <p class="mini-note" style="width:100%;text-align:center;margin-top:8px">Ánimo hoy: <strong>${curMood}</strong></p>
+</div>
+
+${pageTitle('','💧 Agua y 😴 Sueño','Control rápido de bienestar')}
+<div class="grid">
+  <div class="card text-center">
+    <h3>💧 Agua</h3>
+    <b style="font-size:28px">${curWater}</b> <small>vasos</small>
+    <div style="margin-top:10px">${btn('＋ 1 Vasos','btn btn-primary','data-action="add-water"')}</div>
+  </div>
+  <div class="card text-center">
+    <h3>😴 Sueño</h3>
+    <b style="font-size:28px">${curSleep}</b> <small>horas</small>
+    <div style="margin-top:10px">${btn('＋ 1 Horas','btn btn-primary','data-action="add-sleep"')}</div>
   </div>
 </div>`;
 }
 
-function schedule(){const times=['8:00','9:00','10:00','11:00','12:00','13:00','14:00','15:00'];const weekdays=['Lunes','Martes','Miércoles','Jueves','Viernes'];return `${pageTitle('','🕰️ Horario','Tu semana escolar con colores')}${btn('＋ Añadir clase','btn btn-primary','data-action="add-class"')}<div class="schedule-wrap" style="margin-top:14px"><div class="schedule-table"><div class="slot header">Hora</div>${weekdays.map(d=>`<div class="slot header">${d}</div>`).join('')}${times.map(t=>`<div class="slot time">${t}</div>${weekdays.map(d=>{const key=d+'|'+t,s=state.schedule[key];return `<div class="slot" data-action="edit-class" data-key="${esc(key)}" style="${s?'background:'+s.color:''}">${s?`<strong>${esc(s.subject)}</strong><br><small>${esc(s.room||'')}</small>`:'＋'}</div>`}).join('')}`).join('')}</div></div>`}
+function schedule(){const times=['8:00','9:00','10:00','11:00','12:00','13:00','14:00','15:00'];const weekdays=['Lunes','Martes','Miércoles','Jueves','Viernes'];return `${pageTitle('','🕰️ Horario','Tu semana escolar')}${btn('＋ Añadir clase','btn btn-primary','data-action="add-class"')}<div class="schedule-wrap" style="margin-top:14px"><div class="schedule-table"><div class="slot header">Hora</div>${weekdays.map(d=>`<div class="slot header">${d}</div>`).join('')}${times.map(t=>`<div class="slot time">${t}</div>${weekdays.map(d=>{const key=d+'|'+t,s=state.schedule[key];return `<div class="slot" data-action="edit-class" data-key="${esc(key)}" style="${s?'background:'+s.color:''}">${s?`<strong>${esc(s.subject)}</strong><br><small>${esc(s.room||'')}</small>`:'＋'}</div>`}).join('')}`).join('')}</div></div>`}
 
 function study(){
   const dayTasks=state.tasks.filter(t=>t.date===studyDate);
-  const isToday = studyDate === iso(new Date());
+  const mins = Math.floor(pomodoroTime / 60), secs = String(pomodoroTime % 60).padStart(2, '0');
+  
+  // Cálculo Nota Media
+  const totalGrades = state.grades.reduce((acc,g)=>acc+Number(g.score),0);
+  const avgGrade = state.grades.length ? (totalGrades / state.grades.length).toFixed(2) : '-';
 
-  const mins = Math.floor(pomodoroTime / 60);
-  const secs = String(pomodoroTime % 60).padStart(2, '0');
+  return `${pageTitle('','📚 Estudios','Pomodoro, nota media y control de entregas')}
+<div class="toolbar">${btn('＋ Añadir tarea','btn btn-primary','data-action="add-task"')}${btn('＋ Añadir nota examen','btn','data-action="add-grade"')}${btn('＋ Proyecto / Entrega','btn','data-action="add-project"')}</div>
 
-  return `${pageTitle('','📚 Estudios','Agenda diaria, Pomodoro y notas')}
-<div class="toolbar">${btn('＋ Añadir tarea','btn btn-primary','data-action="add-task"')}${btn('📸 Añadir apuntes','btn','data-action="add-note"')}</div>
-
-${pageTitle('','⏱️ Temporizador Pomodoro', pomodoroIsWork ? 'Bloque de estudio' : 'Descanso')}
-<div class="card pomodoro-card">
-  <div class="pomodoro-time">${mins}:${secs}</div>
-  <div class="toolbar" style="justify-content:center; margin-top:10px">
-    ${btn(pomodoroTimer ? 'Pausar' : 'Empezar', 'btn btn-primary', 'data-action="toggle-pomodoro"')}
-    ${btn('Reiniciar', 'btn', 'data-action="reset-pomodoro"')}
+<div class="grid" style="margin-top:14px">
+  <div class="card text-center">
+    <h3>⏱️ Pomodoro</h3>
+    <b style="font-size:32px;font-family:Georgia,serif">${mins}:${secs}</b>
+    <div style="margin-top:8px">${btn(pomodoroTimer ? 'Pausar' : 'Empezar', 'btn btn-primary', 'data-action="toggle-pomodoro"')}</div>
+  </div>
+  <div class="card text-center">
+    <h3>📊 Nota Media</h3>
+    <b style="font-size:32px;color:var(--pink)">${avgGrade}</b>
+    <p class="mini-note">${state.grades.length} exámenes metidos</p>
   </div>
 </div>
 
-${pageTitle('','Agenda Diaria', isToday ? 'Mostrando el día de hoy' : fmt(studyDate))}
-<div class="card" style="margin-bottom:14px">
-  <div style="display:flex; gap:10px; align-items:center; flex-wrap:wrap">
-    <label class="label" style="margin:0">Seleccionar fecha:</label>
-    <input class="input" type="date" id="studyDateInput" value="${studyDate}" style="max-width:200px">
-    ${!isToday ? btn('Ir a Hoy','btn btn-soft','data-action="study-go-today"') : ''}
-  </div>
-</div>
+${pageTitle('','🚀 Control de Entregas y Trabajos','Progreso de proyectos')}
+${state.projects.length?`<div class="list">${state.projects.map(p=>`<div class="card"><strong>${esc(p.title)}</strong> (${p.progress}%)<div style="background:var(--line);height:8px;border-radius:999px;margin:8px 0"><div style="background:var(--pink);width:${p.progress}%;height:100%;border-radius:999px"></div></div><button class="btn" data-action="step-project" data-id="${p.id}">＋ Avanzar 25%</button></div>`).join('')}</div>`:'<div class="empty">No tienes entregas o trabajos registrados.</div>'}
 
-<div class="list">${dayTasks.length?dayTasks.map(t=>`<div class="item"><input class="checkbox" type="checkbox" ${t.done?'checked':''} data-action="toggle-task" data-id="${t.id}"><div class="item-main"><strong style="text-decoration:${t.done?'line-through':'none'}">${esc(t.title)}</strong><small>${esc(t.subject)} · ${t.duration||'Sin duración'}${t.time?' · '+t.time:''}</small></div><button class="circle-btn" style="width:32px;height:32px" data-action="delete-task" data-id="${t.id}">×</button></div>`).join(''):'<div class="empty">No hay tareas de estudio para este día.</div>'}</div>
-
-${pageTitle('','📚 Próximos exámenes','Eventos marcados como examen')}${state.events.filter(e=>e.category==='Examen').length?`<div class="list">${state.events.filter(e=>e.category==='Examen').sort((a,b)=>a.date.localeCompare(b.date)).map(e=>`<div class="item reminder"><div class="item-main"><strong>${esc(e.title)}</strong><small>${fmt(e.date)} ${e.time?'· '+e.time:''}</small></div></div>`).join('')}`:'<div class="empty">Todavía no has añadido exámenes.</div>'}
-${pageTitle('','📸 Apuntes','Fotografías organizadas')}${state.notes.length?`<div class="photo-grid">${state.notes.map(n=>`<div class="card"><img class="note-thumb" src="${n.data}" alt="Apunte"><strong>${esc(n.title)}</strong><div class="mini-note">${esc(n.subject)}</div><button class="btn" data-action="delete-note" data-id="${n.id}">Eliminar</button></div>`).join('')}</div>`:'<div class="empty">Guarda fotos de tus apuntes aquí.</div>'}
-<div class="footer-note">Asignaturas: ${SUBJECTS.join(' · ')}</div>`}
-
-function applyTheme(){
-  document.documentElement.setAttribute('data-theme', state.theme || 'pastel');
+${pageTitle('','Agenda Diaria', fmt(studyDate))}
+<div class="list">${dayTasks.length?dayTasks.map(t=>`<div class="item"><input class="checkbox" type="checkbox" ${t.done?'checked':''} data-action="toggle-task" data-id="${t.id}"><div class="item-main"><strong>${esc(t.title)}</strong><small>${esc(t.subject)}</small></div></div>`).join(''):'<div class="empty">Sin tareas para hoy.</div>'}`;
 }
 
-function render(){
-  applyTheme();
-  if(state.tab==='home')app.innerHTML=home();
-  else if(state.tab==='wardrobe')app.innerHTML=wardrobe();
-  else if(state.tab==='calendar')app.innerHTML=calendar();
-  else if(state.tab==='routine')app.innerHTML=routine();
-  else if(state.tab==='schedule')app.innerHTML=schedule();
-  else app.innerHTML=study();
-}
+// --- LOGICA DE EVENTOS Y ACCIONES ---
+
+function applyTheme(){ document.documentElement.setAttribute('data-theme', state.theme || 'pastel'); }
+function render(){ applyTheme(); if(state.tab==='home')app.innerHTML=home(); else if(state.tab==='wardrobe')app.innerHTML=wardrobe(); else if(state.tab==='calendar')app.innerHTML=calendar(); else if(state.tab==='routine')app.innerHTML=routine(); else if(state.tab==='schedule')app.innerHTML=schedule(); else app.innerHTML=study(); }
 
 function openModal(title,body){modal.innerHTML=`<div class="sheet"><div class="sheet-head"><h2>${title}</h2><button class="close" data-action="close">×</button></div><div style="margin-top:16px">${body}</div></div>`;modal.classList.remove('hidden')}
 function closeModal(){modal.classList.add('hidden');modal.innerHTML=''}
-
-function formEvent(date=''){openModal('Añadir evento',`<form id="eventForm"><div class="form-grid"><div class="full"><label class="label">Nombre</label><input class="input" name="title" required placeholder="Examen de Biología"></div><div><label class="label">Fecha</label><input class="input" type="date" name="date" min="2026-01-01" value="${date||iso(new Date())}" required></div><div><label class="label">Hora</label><input class="input" type="time" name="time"></div><div><label class="label">Categoría</label><select class="select" name="category"><option>Personal</option><option>Examen</option><option>Cumpleaños</option><option>Entrega</option><option>Viaje</option><option>Regla</option><option>Cita</option></select></div><div><label class="label">Color</label><input class="color-input" type="color" name="color" value="#e98fae"></div><div><label class="label">Recordatorio</label><select class="select" name="reminder"><option value="">Sin recordatorio</option><option value="10 min antes">10 min antes</option><option value="1 h antes">1 h antes</option><option value="1 día antes">1 día antes</option></select></div><div class="full"><label class="label">Notas</label><textarea class="textarea" name="notes" placeholder="Detalles..."></textarea></div></div><div style="margin-top:14px">${btn('Guardar evento','btn btn-primary','type="submit"')}</div></form>`)}
-function addOutfit(){const d=iso(outfitWeek);openModal('Nuevo conjunto',`<form id="outfitForm"><div class="form-grid"><div class="full"><label class="label">Conjunto</label><textarea class="textarea" name="name" required placeholder="Camiseta blanca + pantalón negro + zapatillas"></textarea></div><div><label class="label">Día</label><input class="input" type="date" name="date" value="${d}"></div><div><label class="label">Temporada</label><select class="select" name="season"><option value="Verano" ${wardrobeSeason==='Verano'?'selected':''}>☀️ Verano</option><option value="Invierno" ${wardrobeSeason==='Invierno'?'selected':''}>❄️ Invierno</option></select></div><div><label class="label">Ocasión</label><select class="select" name="occasion"><option>Casual</option><option>Clase</option><option>Fiesta</option><option>Deporte</option><option>Especial</option></select></div><div class="full"><label class="label">Contexto</label><input class="input" name="context" placeholder="Examen · informal · cómodo"></div></div><div style="margin-top:14px">${btn('Guardar look','btn btn-primary','type="submit"')}</div></form>`)}
-function addRoutine(){openModal('Nueva tarea de rutina',`<form id="routineForm"><div class="form-grid"><div class="full"><label class="label">Qué tienes que hacer</label><input class="input" name="title" required placeholder="Preparar mochila"></div><div><label class="label">Hora</label><input class="input" type="time" name="time"></div><div><label class="label">Repetir</label><select class="select" name="repeat"><option>Hoy</option><option>Todos los días</option></select></div></div><div style="margin-top:14px">${btn('Guardar','btn btn-primary','type="submit"')}</div></form>`)}
-function addTask(){openModal('Nueva tarea de estudio',`<form id="taskForm"><div class="form-grid"><div class="full"><label class="label">Tarea</label><input class="input" name="title" required placeholder="Hacer ejercicios de Matemáticas"></div><div><label class="label">Asignatura</label><select class="select" name="subject">${SUBJECTS.map(s=>`<option>${s}</option>`).join('')}</select></div><div><label class="label">Fecha</label><input class="input" type="date" name="date" value="${studyDate}" required></div><div><label class="label">Hora</label><input class="input" type="time" name="time"></div><div><label class="label">Duración</label><input class="input" name="duration" placeholder="1 h 30 min"></div></div><div style="margin-top:14px">${btn('Guardar tarea','btn btn-primary','type="submit"')}</div></form>`)}
-function addClass(key=''){const [day,time]=key.split('|');openModal('Añadir clase',`<form id="classForm"><input type="hidden" name="key" value="${esc(key)}"><div class="form-grid"><div><label class="label">Día</label><select class="select" name="day">${['Lunes','Martes','Miércoles','Jueves','Viernes'].map(d=>`<option ${d===day?'selected':''}>${d}</option>`).join('')}</select></div><div><label class="label">Hora</label><select class="select" name="time">${['8:00','9:00','10:00','11:00','12:00','13:00','14:00','15:00'].map(t=>`<option ${t===time?'selected':''}>${t}</option>`).join('')}</select></div><div><label class="label">Asignatura</label><select class="select" name="subject">${SUBJECTS.map(s=>`<option>${s}</option>`).join('')}</select></div><div><label class="label">Color</label><input class="color-input" type="color" name="color" value="#e8b6ca"></div><div class="full"><label class="label">Aula / profesor</label><input class="input" name="room" placeholder="Aula 2 · Profesora Ana"></div></div><div style="margin-top:14px">${btn('Guardar clase','btn btn-primary','type="submit"')}</div></form>`)}
-function addNote(){openModal('Añadir foto de apuntes',`<form id="noteForm"><div class="form-grid"><div class="full"><label class="label">Fotos</label><input class="input" type="file" name="files" accept="image/*" multiple required></div><div><label class="label">Asignatura</label><select class="select" name="subject">${SUBJECTS.map(s=>`<option>${s}</option>`).join('')}</select></div><div><label class="label">Título</label><input class="input" name="title" placeholder="Tema 3"></div></div><div style="margin-top:14px">${btn('Guardar apuntes','btn btn-primary','type="submit"')}</div></form>`)}
-
-async function requestNotifications(){
-  if(!('Notification' in window)){toast('Este navegador no admite notificaciones.');return}
-  const p = await Notification.requestPermission();
-  if(p === 'granted'){
-    toast('🔔 Recordatorios activados');
-    new Notification('My Day ✦',{body:'Notificaciones activadas.',icon:'icons/icon-192.png'});
-  } else { toast('Permiso de notificaciones denegado.'); }
-}
-
-function checkRemindersAndNotify(){
-  if(!('Notification' in window) || Notification.permission !== 'granted') return;
-  const now = new Date();
-  const todayStr = iso(now);
-  const curHours = String(now.getHours()).padStart(2,'0');
-  const curMins = String(now.getMinutes()).padStart(2,'0');
-  const nowTimeStr = `${curHours}:${curMins}`;
-
-  state.events.forEach(e => {
-    if(e.date === todayStr && e.time === nowTimeStr && !e.notified){
-      new Notification(`Recordatorio My Day: ${e.title}`, { body: e.notes || `Evento programado: ${e.title}`, icon: 'icons/icon-192.png' });
-      e.notified = true; save();
-    }
-  });
-
-  state.routines.forEach(r => {
-    if(r.date === todayStr && r.time === nowTimeStr && !r.done && !r.notified){
-      new Notification(`Rutina My Day: ${r.title}`, { body: `Es hora de tu rutina: ${r.title}`, icon: 'icons/icon-192.png' });
-      r.notified = true; save();
-    }
-  });
-}
-setInterval(checkRemindersAndNotify, 30000);
 
 function quickAdd(){
   openModal('Añadir a My Day',`
@@ -228,159 +180,82 @@ function quickAdd(){
   `);
 }
 
-function togglePomodoro(){
-  if(pomodoroTimer){
-    clearInterval(pomodoroTimer);
-    pomodoroTimer = null;
-  } else {
-    pomodoroTimer = setInterval(()=>{
-      if(pomodoroTime > 0){
-        pomodoroTime--;
-      } else {
-        clearInterval(pomodoroTimer);
-        pomodoroTimer = null;
-        pomodoroIsWork = !pomodoroIsWork;
-        pomodoroTime = pomodoroIsWork ? 25 * 60 : 5 * 60;
-        toast(pomodoroIsWork ? '¡Tiempo de estudiar! 📚' : '¡Descanso merecido! ☕');
-      }
-      render();
-    }, 1000);
-  }
-  render();
-}
-
-function resetPomodoro(){
-  if(pomodoroTimer) clearInterval(pomodoroTimer);
-  pomodoroTimer = null;
-  pomodoroIsWork = true;
-  pomodoroTime = 25 * 60;
-  render();
-}
+function addOutfit(){openModal('Nuevo conjunto cápsula',`<form id="outfitForm"><div class="form-grid"><div class="full"><label class="label">Nombre look</label><input class="input" name="name" required placeholder="Look cómodo clase"></div><div class="full"><label class="label">Prendas (Armario cápsula)</label><textarea class="textarea" name="items" placeholder="Jeans anchos, top blanco, zapatillas..."></textarea></div><div><label class="label">Temporada</label><select class="select" name="season"><option value="Verano">☀️ Verano</option><option value="Invierno">❄️ Invierno</option></select></div><div><label class="label">Ocasión</label><select class="select" name="occasion"><option>Casual</option><option>Clase</option><option>Fiesta</option><option>Deporte</option><option>Especial</option></select></div><div><label class="label">Fecha</label><input class="input" type="date" name="date" value="${iso(new Date())}"></div></div><div style="margin-top:14px">${btn('Guardar look','btn btn-primary','type="submit"')}</div></form>`)}
+function formEvent(date=''){openModal('Añadir evento',`<form id="eventForm"><div class="form-grid"><div class="full"><label class="label">Nombre</label><input class="input" name="title" required placeholder="Evento"></div><div><label class="label">Fecha</label><input class="input" type="date" name="date" value="${date||iso(new Date())}"></div><div><label class="label">Color</label><input class="color-input" type="color" name="color" value="#e98fae"></div></div><div style="margin-top:14px">${btn('Guardar','btn btn-primary','type="submit"')}</div></form>`)}
+function addRoutine(){openModal('Nueva rutina',`<form id="routineForm"><div class="form-grid"><div class="full"><label class="label">Tarea</label><input class="input" name="title" required></div></div><div style="margin-top:14px">${btn('Guardar','btn btn-primary','type="submit"')}</div></form>`)}
+function addTask(){openModal('Nueva tarea',`<form id="taskForm"><div class="form-grid"><div class="full"><label class="label">Tarea</label><input class="input" name="title" required></div><div><label class="label">Asignatura</label><select class="select" name="subject">${SUBJECTS.map(s=>`<option>${s}</option>`).join('')}</select></div><div><label class="label">Fecha</label><input class="input" type="date" name="date" value="${studyDate}"></div></div><div style="margin-top:14px">${btn('Guardar','btn btn-primary','type="submit"')}</div></form>`)}
 
 app.addEventListener('click',e=>{
   const qBtn = e.target.closest('[data-quick-go]');
   if(qBtn){
-    const targetTab = qBtn.dataset.quickGo;
-    closeModal();
-    setTab(targetTab);
-    if(targetTab === 'wardrobe') addOutfit();
-    else if(targetTab === 'calendar') formEvent();
-    else if(targetTab === 'routine') addRoutine();
-    else if(targetTab === 'study') addTask();
-    return;
+    const targetTab = qBtn.dataset.quickGo; closeModal(); setTab(targetTab);
+    if(targetTab === 'wardrobe') addOutfit(); else if(targetTab === 'calendar') formEvent(); else if(targetTab === 'routine') addRoutine(); else if(targetTab === 'study') addTask(); return;
   }
-
-  const b=e.target.closest('[data-action],[data-tab-go]');
-  if(!b)return;
-  const a=b.dataset.action;
+  const b=e.target.closest('[data-action],[data-tab-go]'); if(!b)return; const a=b.dataset.action;
   if(b.dataset.tabGo){setTab(b.dataset.tabGo);return}
   if(a==='close'){closeModal();return}
   if(a==='quick-add')quickAdd();
   else if(a==='set-season'){wardrobeSeason=b.dataset.season;render()}
   else if(a==='set-occasion'){wardrobeOccasion=b.dataset.occ;render()}
-  else if(a==='notify')requestNotifications();
-  else if(a==='toggle-pomodoro')togglePomodoro();
-  else if(a==='reset-pomodoro')resetPomodoro();
-  else if(a==='add-event')formEvent();
-  else if(a==='day-click')formEvent(b.dataset.date);
+  else if(a==='add-outfit')addOutfit();
+  else if(a==='wear-outfit'){const o=state.outfits.find(x=>x.id===b.dataset.id);if(o){o.uses=(o.uses||0)+1;save();render();toast('¡Uso registrado!')}}
+  else if(a==='fav-outfit'){const o=state.outfits.find(x=>x.id===b.dataset.id);if(o){o.favorite=!o.favorite;save();render()}}
   else if(a==='cal-prev'){viewDate=new Date(viewDate.getFullYear(),viewDate.getMonth()-1,1);render()}
   else if(a==='cal-next'){viewDate=new Date(viewDate.getFullYear(),viewDate.getMonth()+1,1);render()}
+  else if(a==='day-click')formEvent(b.dataset.date);
   else if(a==='delete-event'){state.events=state.events.filter(x=>x.id!==b.dataset.id);save();render()}
-  else if(a==='add-outfit')addOutfit();
-  else if(a==='outfit-prev'){outfitWeek.setDate(outfitWeek.getDate()-7);render()}
-  else if(a==='outfit-next'){outfitWeek.setDate(outfitWeek.getDate()+7);render()}
-  else if(a==='outfit-now'){outfitWeek=new Date();render()}
-  else if(a==='fav-outfit'){const o=state.outfits.find(x=>x.id===b.dataset.id);if(o){o.favorite=!o.favorite;save();render()}}
   else if(a==='add-routine')addRoutine();
-  else if(a==='toggle-routine'){const r=state.routines.find(x=>x.id===b.dataset.id);if(r){r.done=b.checked;save();render()}}
+  else if(a==='toggle-routine'){const r=state.routines.find(x=>x.id===b.dataset.id);if(r){r.done=b.checked;save()}}
   else if(a==='delete-routine'){state.routines=state.routines.filter(x=>x.id!==b.dataset.id);save();render()}
-  else if(a==='add-class')addClass();
-  else if(a==='edit-class')addClass(b.dataset.key);
+  else if(a==='set-mood'){state.moodLogs[iso(new Date())]=b.dataset.mood;save();render();toast('Ánimo guardado 😊')}
+  else if(a==='add-water'){const d=iso(new Date());state.waterLogs[d]=(state.waterLogs[d]||0)+1;save();render()}
+  else if(a==='add-sleep'){const d=iso(new Date());state.sleepLogs[d]=(state.sleepLogs[d]||0)+1;save();render()}
   else if(a==='add-task')addTask();
   else if(a==='toggle-task'){const t=state.tasks.find(x=>x.id===b.dataset.id);if(t){t.done=b.checked;save()}}
-  else if(a==='delete-task'){state.tasks=state.tasks.filter(x=>x.id!==b.dataset.id);save();render()}
-  else if(a==='add-note')addNote();
-  else if(a==='delete-note'){state.notes=state.notes.filter(x=>x.id!==b.dataset.id);save();render()}
-  else if(a==='study-go-today'){studyDate=iso(new Date());render()}
-});
-
-app.addEventListener('input', e=>{
-  if(e.target.id==='wardrobeSearchInput'){
-    wardrobeSearchQuery = e.target.value;
-    render();
-    const input = document.getElementById('wardrobeSearchInput');
-    if(input){ input.focus(); input.setSelectionRange(input.value.length, input.value.length); }
+  else if(a==='add-grade'){
+    openModal('Añadir Nota',`<form id="gradeForm"><div class="form-grid"><div><label class="label">Nota (0-10)</label><input class="input" type="number" step="0.1" name="score" required></div></div><div style="margin-top:14px">${btn('Guardar','btn btn-primary','type="submit"')}</div></form>`);
   }
-});
-
-app.addEventListener('change', e=>{
-  if(e.target.id==='studyDateInput'){
-    studyDate = e.target.value;
+  else if(a==='add-project'){
+    openModal('Nuevo Trabajo/Proyecto',`<form id="projectForm"><div class="form-grid"><div class="full"><label class="label">Título</label><input class="input" name="title" required></div></div><div style="margin-top:14px">${btn('Guardar','btn btn-primary','type="submit"')}</div></form>`);
+  }
+  else if(a==='step-project'){
+    const p=state.projects.find(x=>x.id===b.dataset.id);if(p){p.progress=Math.min(100,(p.progress||0)+25);save();render()}
+  }
+  else if(a==='toggle-pomodoro'){
+    if(pomodoroTimer){clearInterval(pomodoroTimer);pomodoroTimer=null;}
+    else{pomodoroTimer=setInterval(()=>{if(pomodoroTime>0)pomodoroTime--;else{clearInterval(pomodoroTimer);pomodoroTimer=null;}render();},1000);}
     render();
   }
 });
 
-modal.addEventListener('click',e=>{if(e.target===modal)closeModal()});
-document.querySelectorAll('.nav-item').forEach(b=>b.addEventListener('click',()=>setTab(b.dataset.tab)));
-
-modal.addEventListener('submit',async e=>{e.preventDefault();const f=e.target,fd=new FormData(f);
- if(f.id==='eventForm'){state.events.push({id:uid(),title:fd.get('title'),date:fd.get('date'),time:fd.get('time'),category:fd.get('category'),color:fd.get('color'),reminder:fd.get('reminder'),notes:fd.get('notes')});save();closeModal();render();toast('Evento guardado ✦')}
- else if(f.id==='outfitForm'){state.outfits.push({id:uid(),name:fd.get('name'),date:fd.get('date'),season:fd.get('season')||'Verano',occasion:fd.get('occasion')||'Casual',context:fd.get('context'),favorite:false});save();closeModal();render();toast('Look guardado 👗')}
- else if(f.id==='routineForm'){const dates=fd.get('repeat')==='Todos los días'?[...Array(7)].map((_,i)=>{const d=new Date();d.setDate(d.getDate()+i);return iso(d)}):[iso(new Date())];dates.forEach(date=>state.routines.push({id:uid(),title:fd.get('title'),time:fd.get('time'),date,done:false}));save();closeModal();render();toast('Rutina guardada ✓')}
- else if(f.id==='taskForm'){state.tasks.push({id:uid(),title:fd.get('title'),subject:fd.get('subject'),date:fd.get('date'),time:fd.get('time'),duration:fd.get('duration'),done:false});save();closeModal();render();toast('Tarea añadida 📚')}
- else if(f.id==='classForm'){const key=fd.get('day')+'|'+fd.get('time');state.schedule[key]={subject:fd.get('subject'),color:fd.get('color'),room:fd.get('room')};save();closeModal();render();toast('Clase guardada 🕰️')}
- else if(f.id==='noteForm'){for(const file of fd.getAll('files')){const data=await new Promise(res=>{const r=new FileReader();r.onload=()=>res(r.result);r.readAsDataURL(file)});state.notes.push({id:uid(),subject:fd.get('subject'),title:fd.get('title')||file.name,data})}save();closeModal();render();toast('Apuntes guardados 📸')}
+modal.addEventListener('submit',async e=>{
+  e.preventDefault();const f=e.target,fd=new FormData(f);
+  if(f.id==='outfitForm'){state.outfits.push({id:uid(),name:fd.get('name'),items:fd.get('items'),season:fd.get('season'),occasion:fd.get('occasion'),date:fd.get('date'),uses:0,favorite:false});save();closeModal();render();}
+  else if(f.id==='eventForm'){state.events.push({id:uid(),title:fd.get('title'),date:fd.get('date'),color:fd.get('color')});save();closeModal();render();}
+  else if(f.id==='routineForm'){state.routines.push({id:uid(),title:fd.get('title'),date:iso(new Date()),done:false});save();closeModal();render();}
+  else if(f.id==='taskForm'){state.tasks.push({id:uid(),title:fd.get('title'),subject:fd.get('subject'),date:fd.get('date'),done:false});save();closeModal();render();}
+  else if(f.id==='gradeForm'){state.grades.push({id:uid(),score:fd.get('score')});save();closeModal();render();}
+  else if(f.id==='projectForm'){state.projects.push({id:uid(),title:fd.get('title'),progress:0});save();closeModal();render();}
 });
 
 document.getElementById('settingsBtn').addEventListener('click',()=>openModal('⚙️ Configuración',`
-  <div class="card">
-    <h3>🎨 Tema de color</h3>
+  <div class="card"><h3>🎨 Tema de color</h3>
     <div class="toolbar" style="margin-top:10px">
-      ${btn('🌸 Pastel', state.theme==='pastel'?'btn btn-primary':'btn', 'data-action="set-theme" data-theme="pastel"')}
-      ${btn('🌙 Noche', state.theme==='dark'?'btn btn-primary':'btn', 'data-action="set-theme" data-theme="dark"')}
-      ${btn('✨ Coquette', state.theme==='coquette'?'btn btn-primary':'btn', 'data-action="set-theme" data-theme="coquette"')}
+      ${btn('🌸 Pastel', 'btn', 'data-action="set-theme" data-theme="pastel"')}
+      ${btn('🌙 Noche', 'btn', 'data-action="set-theme" data-theme="dark"')}
+      ${btn('✨ Coquette', 'btn', 'data-action="set-theme" data-theme="coquette"')}
+      ${btn('☁️ Minimal', 'btn', 'data-action="set-theme" data-theme="minimal"')}
     </div>
   </div>
-  <div class="card" style="margin-top:12px">
-    <h3>💾 Copia de Seguridad</h3>
-    <p class="mini-note">Descarga o restaura tus datos en cualquier momento.</p>
-    <div class="toolbar" style="margin-top:10px">
-      ${btn('📥 Exportar copia', 'btn', 'data-action="export-data"')}
-    </div>
-  </div>
-  <div class="card danger-card" style="margin-top:12px">
-    <h3>⚠️ Borrar datos</h3>
-    ${btn('Borrar todo', 'btn danger', 'data-action="wipe"')}
-  </div>
+  <div class="card" style="margin-top:12px"><h3>💾 Copia de Seguridad</h3>${btn('📥 Exportar datos', 'btn', 'data-action="export-data"')}</div>
+  <div class="card danger-card" style="margin-top:12px">${btn('Borrar todo', 'btn danger', 'data-action="wipe"')}</div>
 `));
 
 modal.addEventListener('click',e=>{
-  if(e.target.closest('[data-action="set-theme"]')){
-    state.theme = e.target.closest('[data-action="set-theme"]').dataset.theme;
-    save(); render(); closeModal();
-  }
-  if(e.target.closest('[data-action="export-data"]')){
-    const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(state));
-    const a = document.createElement('a'); a.href = dataStr; a.download = `my-day-backup.json`; a.click();
-  }
-  if(e.target.closest('[data-action="notify"]')) requestNotifications();
-  if(e.target.closest('[data-action="wipe"]')){
-    if(confirm('¿Borrar todos los datos de My Day?')){ localStorage.removeItem(KEY); location.reload(); }
-  }
+  if(e.target.closest('[data-action="set-theme"]')){state.theme = e.target.closest('[data-action="set-theme"]').dataset.theme;save();render();closeModal();}
+  if(e.target.closest('[data-action="export-data"]')){const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(state));const a = document.createElement('a'); a.href = dataStr; a.download = `my-day-backup.json`; a.click();}
+  if(e.target.closest('[data-action="wipe"]')){if(confirm('¿Borrar todo?')){localStorage.removeItem(KEY);location.reload();}}
 });
 
-if ('serviceWorker' in navigator) {
-  window.addEventListener('load', () => {
-    navigator.serviceWorker.register('./sw.js').then(reg => {
-      reg.addEventListener('updatefound', () => {
-        const newWorker = reg.installing;
-        newWorker.addEventListener('statechange', () => {
-          if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
-            window.location.reload();
-          }
-        });
-      });
-    }).catch(() => {});
-  });
-}
+document.querySelectorAll('.nav-item').forEach(b=>b.addEventListener('click',()=>setTab(b.dataset.tab)));
 render();
